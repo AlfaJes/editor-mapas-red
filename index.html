@@ -360,6 +360,9 @@ header{grid-column:1/-1;display:flex;flex-direction:column;gap:0;padding:0;align
 .btn.icon{padding:6px 11px;font-size:15px;line-height:1}
 #moreMenu{top:calc(100% + 6px);right:0;left:auto}
 #dirty:empty{display:none}
+#p_body .prowC b{white-space:nowrap;font-size:10.5px}
+#p_body .prowC span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#p_body .prowC i{white-space:nowrap;font-size:10.5px;opacity:.85}
 .chips .chip b{color:#e8f1ff}
 </style></head><body><div class="app"><header>
   <div class="hrow hrow1">
@@ -411,6 +414,7 @@ header{grid-column:1/-1;display:flex;flex-direction:column;gap:0;padding:0;align
     <button class="btn sm" id="bZonas" title="Crear, renombrar y borrar secciones">🗂 Secciones</button>
     <button class="btn sm" id="bPath" title="Calcular ruta entre dos equipos">🧭 Ruta</button>
     <button class="btn sm" id="bCheck" title="Avisos de configuración">⚠ Revisión</button>
+    <button class="btn sm" id="bPing" title="Comprobar si todos los equipos se ven entre sí">🩺 Ping</button>
     <button class="btn sm" id="bProj" title="Proyectos guardados">📁 Proyectos</button>
   </div>
   <input type="color" id="cpick" style="position:fixed;left:-100px;top:-100px">
@@ -433,6 +437,15 @@ header{grid-column:1/-1;display:flex;flex-direction:column;gap:0;padding:0;align
   <div id="rack"></div>
   <footer>Arrastra para mover · rueda para zoom · clic en equipo para ver/editar · borde = red · Ctrl+Z deshace</footer>
 </main>
+<div id="pmodal" class="modal"><div class="mbox" style="width:780px;max-height:84vh">
+  <h3>Comprobación de conectividad</h3>
+  <div id="p_sum" style="font-size:12px;color:#9db2d0;line-height:1.6;margin:6px 0 10px"></div>
+  <div id="p_body" style="overflow:auto;max-height:54vh;border-top:1px solid #22314b;border-bottom:1px solid #22314b;padding:8px 0"></div>
+  <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px">
+    <button class="btn" id="p_run">Probar todo</button>
+    <button class="btn on" id="p_close">Cerrar</button>
+  </div>
+</div></div>
 <div id="nmodal" class="modal"><div class="mbox" style="width:440px">
   <h3>Cajón de texto</h3>
   <textarea id="n_text" placeholder="Escribe el texto que quieras anotar en el mapa…" style="width:100%;min-height:110px;background:#0c1626;border:1px solid #26374f;border-radius:8px;color:#dbe9ff;padding:8px;font:12px/1.45 system-ui"></textarea>
@@ -2839,6 +2852,142 @@ try{
 
 document.getElementById('bPdf').onclick=function(){var m=document.getElementById('moreMenu');if(m)m.classList.remove('on');exportPDF();};
 document.getElementById('fColor').onchange=function(e){ state.colorBy=e.target.value; render(); renderList(); };
+
+/* ================= comprobación de conectividad ================= */
+function ipSub(ip){ var p=String(ip||'').split('.'); return p.length===4?p.slice(0,3).join('.'):null; }
+function isL2(id){ var n=byId[id]; return !!n&&(n.tipo==='switch'||n.tipo==='otro'||n.tipo==='wifi'); }
+function l2Path(a,b){
+  var prev={}, seen={}; seen[a]=1;
+  var q=[a];
+  while(q.length){
+    var cur=q.shift();
+    var nbs=adj[cur]?Array.from(adj[cur]):[];
+    for(var i=0;i<nbs.length;i++){
+      var nb=nbs[i]; if(seen[nb])continue;
+      if(nb!==b&&!isL2(nb))continue;
+      seen[nb]=1; prev[nb]=cur;
+      if(nb===b){ var path=[b],x=b; while(prev[x]!==undefined){x=prev[x];path.unshift(x);} return path; }
+      q.push(nb);
+    }
+  }
+  return null;
+}
+function pingAnalyze(){
+  var hosts=nodes.filter(function(n){return n.ip&&n.ip.length;});
+  var devSub={}, subDev={};
+  hosts.forEach(function(n){
+    devSub[n.id]=[];
+    n.ip.forEach(function(ip){
+      var s=ipSub(ip); if(!s)return;
+      if(devSub[n.id].indexOf(s)<0)devSub[n.id].push(s);
+      (subDev[s]=subDev[s]||[]).push({id:n.id,ip:ip});
+    });
+  });
+  var subs=Object.keys(subDev);
+  var se={};
+  nodes.forEach(function(n){
+    var ss=devSub[n.id]||[];
+    for(var i=0;i<ss.length;i++)for(var j=i+1;j<ss.length;j++){
+      (se[ss[i]]=se[ss[i]]||[]).push([ss[j],n.id]);
+      (se[ss[j]]=se[ss[j]]||[]).push([ss[i],n.id]);
+    }
+  });
+  function l3Path(s1,s2){
+    var prev={},seen={};seen[s1]=1;var q=[[s1,[]]];
+    while(q.length){
+      var cur=q.shift(), nod=cur[0], hops=cur[1];
+      var nb=se[nod]||[];
+      for(var i=0;i<nb.length;i++){
+        var to=nb[i][0], via=nb[i][1];
+        if(seen[to])continue;
+        seen[to]=1; var hp=hops.concat([via]);
+        if(to===s2)return hp;
+        q.push([to,hp]);
+      }
+    }
+    return null;
+  }
+  var ok=0, viaRouter=0, noCable=[], noRoute=[];
+  for(var i=0;i<hosts.length;i++)for(var j=i+1;j<hosts.length;j++){
+    var A=hosts[i], B=hosts[j];
+    var sa=devSub[A.id]||[], sb=devSub[B.id]||[];
+    var shared=sa.filter(function(s){return sb.indexOf(s)>=0;});
+    if(shared.length){
+      var p=l2Path(A.id,B.id);
+      if(p){ ok++; }
+      else {
+        var via=false;
+        for(var x2=0;x2<sa.length&&!via;x2++)for(var y2=0;y2<sb.length&&!via;y2++){
+          if(l3Path(sa[x2],sb[y2]))via=true;
+        }
+        if(via){ ok++; viaRouter++; }
+        else {
+          var ipa=(devSub[A.id]&&A.ip)||[], ipb=B.ip||[];
+          noCable.push({a:A.id,b:B.id,sub:shared[0],
+            ipa:(A.ip.filter(function(q){return ipSub(q)===shared[0];})[0])||A.ip[0],
+            ipb:(B.ip.filter(function(q){return ipSub(q)===shared[0];})[0])||B.ip[0]});
+        }
+      }
+    } else {
+      var done=false, ruta=null;
+      for(var x=0;x<sa.length&&!done;x++)for(var y=0;y<sb.length&&!done;y++){
+        var r=l3Path(sa[x],sb[y]);
+        if(r){done=true;ruta=r;}
+      }
+      if(done)ok++; else noRoute.push({a:A.id,b:B.id,s1:sa[0],s2:sb[0]});
+    }
+  }
+  var noip=nodes.filter(function(n){return !(n.ip&&n.ip.length);}).length;
+  return {hosts:hosts.length,subs:subs,subDev:subDev,ok:ok,viaRouter:viaRouter,noCable:noCable,noRoute:noRoute,noip:noip,
+          pairs:hosts.length*(hosts.length-1)/2};
+}
+function pingRun(){
+  var r=pingAnalyze();
+  var sum=document.getElementById('p_sum'), body=document.getElementById('p_body');
+  var fails=r.noCable.length+r.noRoute.length;
+  sum.innerHTML='<b style="color:#e8f1ff">'+r.hosts+'</b> equipos con IP en <b style="color:#e8f1ff">'+r.subs.length+
+    '</b> subredes · <b style="color:#e8f1ff">'+r.pairs+'</b> pares probados · '+
+    '<b style="color:#7ee0a6">'+r.ok+' responden</b> · '+
+    '<b style="color:'+(fails?'#ff9a9a':'#7ee0a6')+'">'+fails+' fallos</b>'+
+    (r.noip?' · <span style="color:#7d93b3">'+r.noip+' sin IP (no comprobables)</span>':'')+
+    '<div style="margin-top:6px;color:#6b83a3;font-size:11.5px">Simulación sobre el mapa: mismo segmento = camino por switches; entre subredes = camino por routers/firewalls con IP en ambas.'+
+    (r.viaRouter?' <span style="color:#9ad2ff">'+r.viaRouter+' pares sólo alcanzables vía router</span>.':'')+'</div>';
+  function row(f,txt,col){
+    var A=byId[f.a],B=byId[f.b];
+    return '<div class="prowC" data-id="'+f.a+'" data-id2="'+f.b+'" style="cursor:pointer">'+
+      '<b style="color:'+col+'">'+(txt||'\u2715')+'</b><span>'+escAttr(A?A.nombre:'?')+' \u2192 '+escAttr(B?B.nombre:'?')+
+      '</span><i>'+escAttr(f.ipa||(A&&A.ip[0])||'')+' \u2192 '+escAttr(f.ipb||(B&&B.ip[0])||'')+'</i></div>';
+  }
+  var html='';
+  if(!fails){ html+='<div class="empty" style="padding:14px 0">Todas las parejas con IP se ven entre s\u00ed.</div>'; }
+  if(r.noCable.length){
+    html+='<div style="font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#ff9a9a;margin:8px 0 4px">Misma subred, sin cable</div>';
+    r.noCable.slice(0,120).forEach(function(f){ html+=row(f,'sin cable','#ff9a9a'); });
+  }
+  if(r.noRoute.length){
+    html+='<div style="font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#ffc86b;margin:12px 0 4px">Sin ruta entre subredes</div>';
+    r.noRoute.slice(0,120).forEach(function(f){ html+=row(f,f.s1+' \u2192 '+f.s2,'#ffc86b'); });
+  }
+  html+='<div style="font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#7d93b3;margin:14px 0 4px">Subredes detectadas</div>';
+  Object.keys(r.subDev).sort().forEach(function(s){
+    var ds=r.subDev[s];
+    html+='<div style="font-size:12px;color:#9db2d0;padding:3px 0"><b style="color:#dbe9ff">'+s+'.0/24</b> \u00b7 '+ds.length+' equipos: '+
+      ds.slice(0,8).map(function(d){return escAttr((byId[d.id]||{}).nombre||'?');}).join(', ')+(ds.length>8?'\u2026':'')+'</div>';
+  });
+  body.innerHTML=html;
+  Array.prototype.forEach.call(body.querySelectorAll('[data-id]'),function(el){
+    el.onclick=function(){
+      var a=el.dataset.id, b=el.dataset.id2;
+      document.getElementById('pmodal').classList.remove('on');
+      state.sel=a; state.selMulti=new Set([a,b]); render(); showDetail();
+      if(byId[a]){ t.k=Math.max(0.7,Math.min(1.2,t.k)); t.x=-byId[a].x*t.k+svg.clientWidth/2; t.y=-byId[a].y*t.k+svg.clientHeight/2; applyT(); }
+    };
+  });
+}
+document.getElementById('bPing').onclick=function(){ document.getElementById('pmodal').classList.add('on'); pingRun(); };
+document.getElementById('p_run').onclick=pingRun;
+document.getElementById('p_close').onclick=function(){ document.getElementById('pmodal').classList.remove('on'); };
+
 // ---------- init ----------
 loadDoc(); if(!restoreLayout())layout(); rebuildUI(); syncEdit(); applyTitle(); bindTitle(); fit(); render(); renderList(); showDetail();
 document.getElementById('bEdge').textContent='Trazado: '+(doc.estyle==='orto'?'ortogonal':(doc.estyle||'curvo'));
