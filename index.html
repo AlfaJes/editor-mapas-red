@@ -2493,7 +2493,7 @@ function notesHTML(){
     return '<g class="'+cls+'" data-nid="'+nn.id+'" transform="translate('+nx+','+ny+')">'+
       '<rect class="ntbg" width="'+w+'" height="'+hh+'" rx="8"/>'+
       '<text class="ntt" x="10" y="'+(sz+3)+'" fill="'+(nn.col||'#dbe9ff')+'" style="font-size:'+sz+'px">'+tsp+'</text>'+
-      '<rect class="nzh2" x="'+(w-40)+'" y="'+(hh-12)+'" width="26" height="10" rx="2"/></g>';
+      '<rect class="nzh" x="'+(w-12)+'" y="'+(hh-12)+'" width="10" height="10" rx="2"/></g>';
   }).join('');
 }
 function openNote(id){
