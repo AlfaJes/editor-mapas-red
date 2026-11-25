@@ -145,35 +145,45 @@ function renderArmarios(){
       // chapa frontal con dos tonos
       s+='<rect x="'+X0+'" y="'+y+'" width="'+WPP+'" height="'+hh+'" rx="3" fill="#1b2a42" stroke="#5a7699" stroke-width="1.2"/>';
       s+='<rect x="'+(X0+3)+'" y="'+(y+2)+'" width="'+(WPP-6)+'" height="'+(hh-4)+'" rx="2" fill="#0e1a2b" opacity=".5"/>';
-      // tornillos
-      s+='<circle cx="'+(X0+7)+'" cy="'+(y+hh/2)+'" r="2.2" fill="#8fa8c7" opacity=".8"/>';
-      s+='<circle cx="'+(X0+WPP-7)+'" cy="'+(y+hh/2)+'" r="2.2" fill="#8fa8c7" opacity=".8"/>';
+      // orejas de montaje 19" con tornillos
+      s+='<rect x="'+(X0-6)+'" y="'+(y+hh/2-7)+'" width="8" height="14" rx="1.5" fill="#243449" stroke="#5a7699" stroke-width=".8"/>';
+      s+='<rect x="'+(X0+WPP-2)+'" y="'+(y+hh/2-7)+'" width="8" height="14" rx="1.5" fill="#243449" stroke="#5a7699" stroke-width=".8"/>';
+      s+='<circle cx="'+(X0-2)+'" cy="'+(y+hh/2)+'" r="1.8" fill="#93a9c6"/>';
+      s+='<circle cx="'+(X0+WPP+2)+'" cy="'+(y+hh/2)+'" r="1.8" fill="#93a9c6"/>';
       // etiqueta y controles
       s+='<text x="'+(X0+16)+'" y="'+(y+(filas>1?13:hh/2+3.5))+'" class="cabn">'+escAttr(it.n||('Patch '+total+'p'))+'</text>';
       s+='<text class="armu" data-hu="'+idx+'" x="'+(X0+16)+'" y="'+(y+(filas>1?25:hh/2+3.5))+'" title="Altura de este patch ('+filas+'U). Clic para cambiarla.">'+filas+'U</text>';
       s+='<text class="armu" data-ppn="'+idx+'" x="'+(X0+40)+'" y="'+(y+(filas>1?25:hh/2+3.5))+'" title="Puertos por fila. Clic para cambiarlos.">'+per+'P/fila</text>';
       s+='<text class="cabbulk" data-bulk="'+idx+'" x="'+(X0+WPP-74)+'" y="'+(y+13)+'" title="Enlazar los puertos con el mismo número de un switch">⚡</text>';
       s+='<text class="cabxx" data-del="'+idx+'" x="'+(X0+WPP-10)+'" y="'+(y+13)+'" text-anchor="end" title="Quitar">✕</text>';
-      // 24 conectores RJ45 por U, en dos bloques de 12
-      var px0=X0+72, pfin=X0+WPP-84, huecoG=8;
+      // conectores RJ45 en dos bloques, con tira de numeracion como los paneles reales
+      var px0=X0+72, pfin=X0+WPP-84, huecoG=10;
       var pw=(pfin-px0-huecoG)/per;
-      var ah=Math.max(8,(hh-6)/filas-2);
+      var rowH=(hh-4)/filas;                 // alto de cada fila
+      var stripH=8;                          // tira blanca de numeros
+      var sockH=Math.max(7,rowH-stripH-2);
       for(var r2=0;r2<filas;r2++){
+        var ry=y+2+r2*rowH;
+        // tira de rotulacion
+        s+='<rect x="'+px0+'" y="'+(ry+sockH+1).toFixed(1)+'" width="'+(pfin-px0)+'" height="'+stripH+'" rx="1" fill="#c9d4e2" opacity=".92"/>';
         for(var c=0;c<per;c++){
           var p=r2*per+c+1;
           var lk=(it.links&&it.links[p])||null;
-          var bx2=px0+c*pw+(c>=12?huecoG:0), by2=y+4+r2*(ah+3);
-          // cuerpo del conector keystone
-          s+='<rect class="armport'+(lk?' on':'')+'" data-pp="'+idx+'" data-p="'+p+'" x="'+bx2.toFixed(1)+'" y="'+by2.toFixed(1)+'" width="'+Math.max(4,pw-2.2).toFixed(1)+'" height="'+ah.toFixed(1)+'" rx="1.6"'+
+          var bx2=px0+c*pw+(c>=Math.ceil(per/2)?huecoG:0);
+          var w2=Math.max(4,pw-2.6);
+          // cuerpo del keystone
+          s+='<rect class="armport'+(lk?' on':'')+'" data-pp="'+idx+'" data-p="'+p+'" x="'+(bx2+1.2).toFixed(1)+'" y="'+ry.toFixed(1)+'" width="'+w2.toFixed(1)+'" height="'+sockH.toFixed(1)+'" rx="1.4"'+
              '><title>Puerto '+p+(lk?(' → '+lk.dev+' P'+lk.port):' (libre)')+'</title></rect>';
-          // boca del conector
-          s+='<rect x="'+(bx2+1.8).toFixed(1)+'" y="'+(by2+1.8).toFixed(1)+'" width="'+Math.max(2,pw-5.8).toFixed(1)+'" height="'+(ah-3.6).toFixed(1)+'" rx="1" fill="#050b14" pointer-events="none"/>';
-          // lengüeta inferior
-          s+='<rect x="'+(bx2+pw/2-2).toFixed(1)+'" y="'+(by2+ah-2.6).toFixed(1)+'" width="2.6" height="2.4" rx="0.6" fill="#7f97b5" opacity=".75" pointer-events="none"/>';
-          // numeración
-          if(ah>=11 && pw>=11){
-            s+='<text x="'+(bx2+pw/2-1).toFixed(1)+'" y="'+(by2+ah-3.4).toFixed(1)+'" class="cabpn" text-anchor="middle">'+p+'</text>';
+          // boca hundida
+          s+='<rect x="'+(bx2+2.6).toFixed(1)+'" y="'+(ry+1.8).toFixed(1)+'" width="'+Math.max(2,w2-3).toFixed(1)+'" height="'+Math.max(2,sockH-4.6).toFixed(1)+'" rx="0.7" fill="#04101c" stroke="#2b405c" stroke-width=".6" pointer-events="none"/>';
+          // contactos dorados
+          if(sockH>10){
+            s+='<g pointer-events="none" opacity=".55"><rect x="'+(bx2+3.6).toFixed(1)+'" y="'+(ry+3).toFixed(1)+'" width="'+(w2-6).toFixed(1)+'" height="1" fill="#d9b45a"/><rect x="'+(bx2+3.6).toFixed(1)+'" y="'+(ry+5).toFixed(1)+'" width="'+(w2-6).toFixed(1)+'" height="1" fill="#d9b45a"/></g>';
           }
+          // pestaña inferior
+          s+='<rect x="'+(bx2+w2/2-1.6).toFixed(1)+'" y="'+(ry+sockH-4).toFixed(1)+'" width="2.4" height="3" rx="0.6" fill="#93a9c6" opacity=".9" pointer-events="none"/>';
+          // numero en la tira
+          s+='<text x="'+(bx2+pw/2-1.2).toFixed(1)+'" y="'+(ry+sockH+stripH-1.4).toFixed(1)+'" class="cabpn2" text-anchor="middle">'+p+'</text>';
         }
       }
       s+='</g>';

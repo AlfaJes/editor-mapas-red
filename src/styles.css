@@ -408,6 +408,7 @@ header{grid-column:1/-1;display:flex;flex-direction:column;gap:0;padding:0;align
 .armu{fill:#8fb4e6;font-size:9.5px;cursor:pointer;paint-order:stroke;stroke:#0b1524;stroke-width:2px}
 .armu:hover{fill:#cfe0f7}
 .cabpn{fill:#5d7a9e;font-size:8.5px}
+.cabpn2{fill:#25344a;font-size:6px;font-weight:600;pointer-events:none}
 .armport{fill:#1e2f47;stroke:#3d5878;stroke-width:1}
 .armport.on{fill:#255a94;stroke:#6ea8ff}
 .armport:hover{fill:#2f6fae}
