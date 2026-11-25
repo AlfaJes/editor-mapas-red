@@ -574,8 +574,13 @@ function portSel(e,side){
   var id=(side==='s')?e.s:e.t, dev=byId[id];
   if(!dev)return '';
   var cap=capFor(id), cur=((side==='s')?e.pA:e.pB)||1;
+  var ocup={};
+  doc.edges.forEach(function(x){ if(x===e)return;
+    if(x.s===id&&x.pA)ocup[x.pA]=1;
+    if(x.t===id&&x.pB)ocup[x.pB]=1; });
   var ops='';
-  for(var i=1;i<=cap;i++)ops+='<option value="'+i+'"'+(i===cur?' selected':'')+'>'+i+'</option>';
+  for(var i=1;i<=cap;i++){ if(ocup[i]&&i!==cur)continue;
+    ops+='<option value="'+i+'"'+(i===cur?' selected':'')+'>'+i+'</option>'; }
   return '<select id="e_p'+side+'" class="portsl">'+ops+'</select> '+
     '<span style="color:#7d93b3">'+escAttr(dev.nombre)+'</span>';
 }
@@ -1210,8 +1215,11 @@ function portGrid(n){
   }
   const rows=items.slice().sort((a,b)=>a.port-b.port).map(it=>{
     const d=byId[it.other]; if(!d)return '';
+    const ocup={};
+    items.forEach(function(y){ if(y.e!==it.e) ocup[y.port]=1; });
     let ops='';
-    for(let q=1;q<=capN;q++) ops+=`<option value="${q}"${q===it.port?' selected':''}>P${q}</option>`;
+    for(let q=1;q<=capN;q++){ if(ocup[q]&&q!==it.port)continue;
+      ops+=`<option value="${q}"${q===it.port?' selected':''}>P${q}</option>`; }
     return `<div class="prowC" data-id="${d.id}"><select class="psel" data-ei="${it.idx}" data-side="${it.side}" title="Cambiar el puerto de este cable">${ops}</select><span>${escAttr(d.nombre)}</span><i>${escAttr((TYPE[d.tipo]||['',''])[1])}</i></div>`;
   }).join('');
   return `<div class="pcap"><span>Puertos · cambia el puerto en la lista</span><span>${items.length}/${N}</span></div>
@@ -1750,7 +1758,7 @@ function showDetail(){
   } else {
     d.querySelectorAll('.hitem').forEach(el=>el.onclick=()=>select(el.dataset.id,true));
     d.querySelectorAll('.pcell.on').forEach(el=>el.onclick=()=>select(el.dataset.id,true));
-    d.querySelectorAll('.plist .prowC').forEach(el=>el.onclick=()=>{ if(el.dataset.id)select(el.dataset.id,true); });
+    d.querySelectorAll('.plist .prowC').forEach(el=>el.onclick=(ev)=>{ if(ev.target&&(ev.target.tagName==='SELECT'||ev.target.tagName==='OPTION'))return; if(el.dataset.id)select(el.dataset.id,true); });
     d.querySelectorAll('.plist .prow').forEach(el=>el.style.cursor='pointer');
     const st=document.getElementById('e_start');
     if(st)st.onclick=()=>{state.editing=n.id;showDetail();};
