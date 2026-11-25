@@ -472,10 +472,10 @@ header{grid-column:1/-1;display:flex;flex-direction:column;gap:0;padding:0;align
 </aside>
 <main>
   <svg id="map" xmlns="http://www.w3.org/2000/svg"><defs><pattern id="gridp" width="12" height="12" patternUnits="userSpaceOnUse"><path d="M12 0H0V12" fill="none" stroke="#182740" stroke-width="1"/></pattern></defs><g id="world"><rect id="gridrect" x="-3000" y="-3000" width="12000" height="9000" fill="url(#gridp)" style="display:none"/>
-    <g id="gHulls"></g><g id="gEdges"></g><g id="gNodes"></g><g id="gLabels"></g><g id="gELab"></g><g id="gArrows"></g><g id="gNotes"></g><g id="gHandles"></g></g></svg>
+    <g id="gHulls"></g><g id="gEdges"></g><g id="gNodes"></g><g id="gLabels"></g><g id="gELab"></g><g id="gArrows"></g><g id="gNotes"></g><g id="gHandles"></g><rect id="selbox" x="0" y="0" width="0" height="0" fill="rgba(79,140,255,.12)" stroke="#4f8cff" stroke-dasharray="5 4" stroke-width="1.2" style="display:none;pointer-events:none"/></g></svg>
   <div class="legend" id="legend"></div>
   <div id="rack"></div>
-  <footer>Arrastra para mover · rueda para zoom · clic en equipo para ver/editar · borde = red · Ctrl+Z deshace</footer>
+  <footer>Arrastra para mover · rueda para zoom · clic en equipo para ver/editar · <b>Shift+arrastrar</b> selecciona varios · borde = red · Ctrl+Z deshace</footer>
 </main>
 <div id="pmodal" class="modal"><div class="mbox" style="width:780px;max-height:84vh">
   <h3>Comprobación de conectividad</h3>
@@ -2012,7 +2012,7 @@ svg.addEventListener('wheel',e=>{e.preventDefault();
   const r=svg.getBoundingClientRect(),mx=e.clientX-r.left,my=e.clientY-r.top;
   const k2=Math.max(.25,Math.min(3.5,t.k*(e.deltaY<0?1.12:1/1.12)));
   t.x=mx-(mx-t.x)*(k2/t.k); t.y=my-(my-t.y)*(k2/t.k); t.k=k2; applyT();},{passive:false});
-let pan=null,drag=null,zdrag=null,zres=null,bh=null,dgroup=null,d0=null,suppressClick=false;
+let pan=null,drag=null,zdrag=null,zres=null,bh=null,dgroup=null,d0=null,suppressClick=false,sbox=null;
 svg.addEventListener('mousedown',e=>{
   const ehEl=e.target.closest?e.target.closest('.eh,.ehadd'):null;
   if(ehEl){const pp=ehEl.dataset.e.split('|');
@@ -2085,8 +2085,25 @@ svg.addEventListener('mousedown',e=>{
       svg.classList.add('pan'); return;
     }
     drag=byId[g.dataset.id];drag._moved=false;return;}
+  if(e.shiftKey){
+    const r=svg.getBoundingClientRect();
+    const wx=(e.clientX-r.left-t.x)/t.k, wy=(e.clientY-r.top-t.y)/t.k;
+    sbox={x:wx,y:wy,x0:wx,y0:wy,add:e.ctrlKey||e.metaKey};
+    const sb=document.getElementById('selbox');
+    if(sb){sb.setAttribute('x',wx);sb.setAttribute('y',wy);sb.setAttribute('width',0);sb.setAttribute('height',0);sb.style.display='';}
+    svg.classList.add('pan'); return;
+  }
   pan={x:e.clientX,y:e.clientY,tx:t.x,ty:t.y};svg.classList.add('pan');});
 window.addEventListener('mousemove',e=>{
+  if(sbox){
+    const r=svg.getBoundingClientRect();
+    const wx=(e.clientX-r.left-t.x)/t.k, wy=(e.clientY-r.top-t.y)/t.k;
+    const x=Math.min(sbox.x0,wx), y=Math.min(sbox.y0,wy), w=Math.abs(wx-sbox.x0), hh=Math.abs(wy-sbox.y0);
+    sbox.cur={x:x,y:y,w:w,h:hh};
+    const sb=document.getElementById('selbox');
+    if(sb){sb.setAttribute('x',x.toFixed(1));sb.setAttribute('y',y.toFixed(1));sb.setAttribute('width',w.toFixed(1));sb.setAttribute('height',hh.toFixed(1));}
+    return;
+  }
   if(adrag){
     const r=svg.getBoundingClientRect();
     const ax=(e.clientX-r.left-t.x)/t.k, ay=(e.clientY-r.top-t.y)/t.k;
@@ -2182,6 +2199,18 @@ window.addEventListener('mouseup',()=>{
     dgroup=null;d0=null;svg.classList.remove('pan');return;
   }
   if(drag){ if(drag._moved){drag.nx=drag.x;drag.ny=drag.y;save();} else select(drag.id,false); drag=null; }
+  if(sbox){
+    var sb=document.getElementById('selbox'); if(sb)sb.style.display='none';
+    var cur=sbox.cur;
+    if(cur&&cur.w>6&&cur.h>6){
+      if(!sbox.add)state.msel.clear();
+      nodes.filter(vis).forEach(function(n){
+        if(n.x>=cur.x&&n.x<=cur.x+cur.w&&n.y>=cur.y&&n.y<=cur.y+cur.h)state.msel.add(n.id);
+      });
+      state.sel=null; state.esel=null; render(); renderList(); showDetail(); suppressClick=true;
+    }
+    sbox=null; svg.classList.remove('pan'); return;
+  }
   pan=null; svg.classList.remove('pan');});
 svg.addEventListener('click',e=>{
   if(suppressClick){suppressClick=false;return;}
