@@ -16,6 +16,7 @@ function saveEdit(id){
     ip:ips,mac:g('e_mac'),modelo:g('e_modelo'),ubic:g('e_ubic'),notas:g('e_notas')},
     readFields('e',tipo));
   const ic=document.getElementById('e_ico'); if(ic){ if(ic.value)n.ico=ic.value; else delete n.ico; }
+  const _u=document.getElementById('e_u'); if(_u){ var uv=parseInt(_u.value); if(uv>0)n.u=uv; else delete n.u; }
   const pr=readPorts('e'); if(pr){n.ports=pr;n.puertos=String(pr.length);}
   const nics=nicsRead('e_nics'); if(nics.length)n.nics=nics; else delete n.nics;
   save(); rebuild(); rebuildUI();
@@ -95,3 +96,42 @@ function undo(){
   applyTitle(); rebuildUI(); render(); renderList(); showDetail(); save();
   const b=document.getElementById('dirty'); if(b)b.textContent='deshecho ('+hist.length+')';
 }
+
+// ---------- alinear / distribuir la selección ----------
+function msList(){ return Array.from(state.msel).map(function(k){return byId[k];}).filter(Boolean); }
+function updateMsbar(){
+  var bar=document.getElementById('msbar'); if(!bar)return;
+  var n=state.msel.size;
+  bar.classList.toggle('on', n>1 && state.view!=='rack');
+  var c=bar.querySelector('.msc'); if(c)c.textContent=n+' equipos';
+}
+function alignSel(kind){
+  var L=msList(); if(L.length<2)return;
+  snap();
+  if(kind==='l'){ var x=Math.min.apply(null,L.map(function(n){return n.x;})); L.forEach(function(n){n.x=x;n.nx=x;}); }
+  else if(kind==='r'){ var x2=Math.max.apply(null,L.map(function(n){return n.x;})); L.forEach(function(n){n.x=x2;n.nx=x2;}); }
+  else if(kind==='cx'){ var xs=L.map(function(n){return n.x;}); var mx=(Math.min.apply(null,xs)+Math.max.apply(null,xs))/2;
+    L.forEach(function(n){n.x=sn(mx);n.nx=n.x;}); }
+  else if(kind==='t'){ var y=Math.min.apply(null,L.map(function(n){return n.y;})); L.forEach(function(n){n.y=y;n.ny=y;}); }
+  else if(kind==='b'){ var y2=Math.max.apply(null,L.map(function(n){return n.y;})); L.forEach(function(n){n.y=y2;n.ny=y2;}); }
+  else if(kind==='cy'){ var ys=L.map(function(n){return n.y;}); var my=(Math.min.apply(null,ys)+Math.max.apply(null,ys))/2;
+    L.forEach(function(n){n.y=sn(my);n.ny=n.y;}); }
+  else if(kind==='dh'){
+    L.sort(function(a,b){return a.x-b.x;});
+    var x0=L[0].x, x1=L[L.length-1].x, paso=(x1-x0)/(L.length-1);
+    L.forEach(function(n,i){ n.x=sn(x0+paso*i); n.nx=n.x; });
+  }
+  else if(kind==='dv'){
+    L.sort(function(a,b){return a.y-b.y;});
+    var y0=L[0].y, y1=L[L.length-1].y, paso2=(y1-y0)/(L.length-1);
+    L.forEach(function(n,i){ n.y=sn(y0+paso2*i); n.ny=n.y; });
+  }
+  save(); render();
+}
+document.addEventListener('click',function(ev){
+  var b=ev.target.closest && ev.target.closest('#msbar [data-al]');
+  if(!b)return;
+  var k=b.getAttribute('data-al');
+  if(k==='q'){ state.msel.clear(); render(); return; }
+  alignSel(k);
+});

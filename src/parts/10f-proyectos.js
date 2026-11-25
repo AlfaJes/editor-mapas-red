@@ -62,7 +62,7 @@ function projOpen(id){
   applyDoc(d);
   document.getElementById('pmodal').classList.remove('on');
 }
-document.getElementById('bProj').onclick=function(){ renderProjects(); document.getElementById('pmodal').classList.add('on'); };
+document.getElementById('bProj').onclick=function(){ renderProjects(); try{renderBaks();}catch(e){} document.getElementById('pmodal').classList.add('on'); };
 document.getElementById('p_close').onclick=function(){ document.getElementById('pmodal').classList.remove('on'); };
 document.getElementById('p_new').onclick=function(){
   PROJ.cur=newId(); applyDoc(blankDoc()); save();
@@ -121,3 +121,29 @@ document.getElementById('bPdf').onclick=function(){var m=document.getElementById
 document.getElementById('fColor').onchange=function(e){ state.colorBy=e.target.value; render(); renderList(); };
 
 /* ================= comprobación de conectividad ================= */
+
+// ---------- restaurar copias ----------
+function renderBaks(){
+  var box=document.getElementById('p_bak'); if(!box)return;
+  var L=bakList().slice().reverse();
+  if(!L.length){ box.innerHTML='<div class="empty" style="padding:6px 0">Sin copias todavía</div>'; return; }
+  box.innerHTML=L.map(function(b,i){
+    var d=new Date(b.t);
+    var t=d.toLocaleDateString('es-ES',{day:'2-digit',month:'2-digit'})+' '+d.toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'});
+    var n=0; try{ n=JSON.parse(b.d).nodes.length; }catch(e){}
+    return '<div class="prowC" style="cursor:default"><span>'+t+'</span><i>'+n+' equipos</i>'+
+      '<button class="btn sm" data-bak="'+(L.length-1-i)+'">Restaurar</button></div>';
+  }).join('');
+  box.querySelectorAll('[data-bak]').forEach(function(btn){
+    btn.onclick=function(){
+      var idx=+btn.getAttribute('data-bak');
+      var L2=bakList(); var b=L2[idx]; if(!b)return;
+      if(!confirm('¿Restaurar la copia del '+new Date(b.t).toLocaleString('es-ES')+'? Se sustituye el mapa actual.'))return;
+      try{
+        doc=JSON.parse(b.d); save(); rebuild();
+        if(!restoreLayout())layout();
+        rebuildUI(); render(); renderList(); showDetail(); fit();
+      }catch(e){ alert('Copia no válida: '+e.message); }
+    };
+  });
+}

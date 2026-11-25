@@ -396,6 +396,7 @@ function formHTML(n){
     <div class="row2">
       <div class="fld"><label>Modelo</label><input id="e_modelo" value="${(n.modelo||'').replace(/"/g,'&quot;')}"></div>
       <div class="fld"><label>Ubicación</label><input id="e_ubic" value="${(n.ubic||'').replace(/"/g,'&quot;')}"></div>
+      <div class="fld"><label>Altura en el armario (U)</label><input id="e_u" type="number" min="1" max="8" value="${n.u||''}" placeholder="auto"></div>
     </div>
     ${fieldsHTML('e',n.tipo,n)}
     <div class="fld"><label>Adaptadores de red (físicos y virtuales)</label>

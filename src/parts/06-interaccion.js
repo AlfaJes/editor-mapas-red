@@ -189,7 +189,7 @@ window.addEventListener('mouseup',()=>{
     if(d0&&d0.moved){dgroup.forEach(o=>{o.n.nx=o.n.x;o.n.ny=o.n.y;});save();suppressClick=true;}
     dgroup=null;d0=null;svg.classList.remove('pan');return;
   }
-  if(drag){ if(drag._moved){drag.nx=drag.x;drag.ny=drag.y;save();} else select(drag.id,false); drag=null; }
+  if(drag){ if(drag._moved){drag.nx=drag.x;drag.ny=drag.y;save();} else if(!e.__touch) select(drag.id,false); drag=null; }
   if(sbox){
     var sb=document.getElementById('selbox'); if(sb)sb.style.display='none';
     var cur=sbox.cur;

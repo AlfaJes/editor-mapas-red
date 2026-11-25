@@ -6,7 +6,9 @@
   "scripts": {
     "build": "node build.mjs",
     "build:public": "node build.mjs --public",
-    "build:all": "node build.mjs && node build.mjs --public"
+    "build:all": "node build.mjs && node build.mjs --public",
+    "test": "node test/smoke.mjs dist/mapa.html",
+    "check": "node build.mjs && node test/smoke.mjs dist/mapa.html"
   },
   "repository": {
     "type": "git",

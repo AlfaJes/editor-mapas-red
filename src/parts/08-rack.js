@@ -10,6 +10,8 @@ function rackZonas(){
 }
 function rackZonasBool(){ return rackZonas(); }
 function rackU(n){
+  var fijo=parseInt(n.u);
+  if(fijo>0)return Math.max(1,Math.min(8,fijo));
   var t=n.tipo;
   if(t==='servidor'||t==='nas')return 2;
   if(t==='ups')return 3;
@@ -172,6 +174,7 @@ function renderRack(){
     (mode==='armario'?('<select id="rkz" class="rkz">'+zs.map(function(z){
         return '<option value="'+escAttr(z)+'"'+(z===cur?' selected':'')+'>'+escAttr(z)+'</option>';}).join('')+
       '<option value="*"'+(cur==='*'?' selected':'')+'>— todos los armarios —</option></select>'+
+      '<button class="btn sm" id="rkpng" title="Descargar este armario en PNG">\u2913 PNG</button>'+
       '<button class="btn sm" id="rkpatch" title="Añadir un patch panel a este armario">\uFF0B Patch</button>'+
       '<button class="btn sm tog'+(state.rackOnly?' on':'')+'" id="rkonly" title="Mostrar solo equipos de armario (switch, router, servidor…)">Solo armario</button>'+
       '<span class="rkleg"><i style="background:#4f8cff"></i>ocupado <i style="background:#22344f"></i>libre</span>'+
@@ -189,6 +192,7 @@ function renderRack(){
     g.onclick=function(){ var id=g.getAttribute('data-id'); if(!id)return; if(state.rackSel!==id){ state.rackSel=id; renderRack(); } };
     g.ondblclick=function(){ var id=g.getAttribute('data-id'); gotoMapa(id); };
   });
+  var rg=document.getElementById('rkpng'); if(rg)rg.onclick=function(){ exportRackPNG(); };
   var rp=document.getElementById('rkpatch'); if(rp)rp.onclick=function(){
     var z=state.rackZone&&state.rackZone!=='*'?state.rackZone:(rackZonas()[0]||'');
     if(!z)return;
@@ -218,7 +222,9 @@ function renderRack(){
   var bu=document.getElementById('rkup'); if(bu)bu.onclick=function(){ rackMove(-1); };
   var bd=document.getElementById('rkdn'); if(bd)bd.onclick=function(){ rackMove(1); };
   var bg=document.getElementById('rkgoto'); if(bg)bg.onclick=function(){ if(state.rackSel)gotoMapa(state.rackSel); };
+  try{bindRackDrag();}catch(e){}
 }
+
 function rackLista(){
   if(!RACK)return;
   const rz=[...new Set(nodes.filter(n=>/rack|armario/i.test(n.zona)).map(n=>n.zona))].sort();
@@ -294,3 +300,86 @@ document.getElementById('bZonas').onclick=function(){
   renderZmodal(); document.getElementById('zmodal').classList.add('on');
 };
 document.getElementById('z_close').onclick=function(){document.getElementById('zmodal').classList.remove('on');};
+
+// ---------- exportar el armario a PNG ----------
+function exportRackPNG(){
+  var svgEl=document.querySelector('.cabsvg');
+  if(!svgEl){ alert('Abre un armario para poder exportarlo.'); return; }
+  var clone=svgEl.cloneNode(true);
+  var vb=svgEl.viewBox.baseVal, W=Math.round(vb.width), H=Math.round(vb.height);
+  clone.setAttribute('width',W); clone.setAttribute('height',H);
+  // pasar estilos calculados a atributos para que no dependan de la hoja de la página
+  var src=svgEl.querySelectorAll('*'), dst=clone.querySelectorAll('*');
+  for(var i=0;i<src.length;i++){
+    var cs=getComputedStyle(src[i]);
+    var d=dst[i]; if(!d||!d.style)continue;
+    if(cs.fill&&cs.fill!=='none')d.setAttribute('fill',cs.fill);
+    if(cs.stroke&&cs.stroke!=='none')d.setAttribute('stroke',cs.stroke);
+    if(cs.strokeWidth)d.setAttribute('stroke-width',cs.strokeWidth);
+    if(cs.fontSize)d.setAttribute('font-size',cs.fontSize);
+    d.setAttribute('font-family','Segoe UI,Arial,sans-serif');
+    if(cs.fontWeight)d.setAttribute('font-weight',cs.fontWeight);
+    if(cs.opacity&&cs.opacity!=='1')d.setAttribute('opacity',cs.opacity);
+  }
+  clone.setAttribute('xmlns','http://www.w3.org/2000/svg');
+  var xml=new XMLSerializer().serializeToString(clone);
+  var img=new Image();
+  img.onload=function(){
+    var sc=2, cv=document.createElement('canvas');
+    cv.width=W*sc; cv.height=H*sc;
+    var ctx=cv.getContext('2d');
+    ctx.fillStyle='#0d1626'; ctx.fillRect(0,0,cv.width,cv.height);
+    ctx.setTransform(sc,0,0,sc,0,0);
+    ctx.drawImage(img,0,0);
+    cv.toBlob(function(b){
+      var a=document.createElement('a');
+      a.href=URL.createObjectURL(b);
+      a.download='armario_'+(state.rackZone||'rack').replace(/[^\w]+/g,'_')+'.png';
+      a.click();
+      document.getElementById('dirty').textContent='armario exportado';
+    },'image/png');
+  };
+  img.onerror=function(){ alert('No se pudo generar la imagen del armario.'); };
+  img.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(xml);
+}
+
+// ---------- arrastrar equipos dentro del armario ----------
+function rackRowIds(zone){
+  var out=[];
+  Array.prototype.forEach.call(document.querySelectorAll('.cabrow[data-zone]'),function(g){
+    if(g.getAttribute('data-pp'))return;
+    if(g.getAttribute('data-zone')!==zone)return;
+    out.push(g.getAttribute('data-id'));
+  });
+  return out;
+}
+function bindRackDrag(){
+  Array.prototype.forEach.call(RACK.querySelectorAll('.cabrow'),function(g){
+    if(g.getAttribute('data-pp'))return;
+    g.addEventListener('mousedown',function(ev){
+      if(ev.target.closest('[data-hide]'))return;
+      ev.preventDefault();
+      var id=g.getAttribute('data-id'), zone=g.getAttribute('data-zone');
+      var y0=ev.clientY, moved=false;
+      function mm(e2){
+        var dy=e2.clientY-y0;
+        if(Math.abs(dy)>4){ moved=true; g.setAttribute('transform','translate(0,'+dy+')'); g.style.opacity=.72; }
+      }
+      function mu(e2){
+        window.removeEventListener('mousemove',mm); window.removeEventListener('mouseup',mu);
+        g.removeAttribute('transform'); g.style.opacity='';
+        if(!moved){ state.rackSel=id; renderRack(); return; }
+        var pasos=Math.round((e2.clientY-y0)/22);
+        if(!pasos)return;
+        var ids=rackRowIds(zone), i=ids.indexOf(id);
+        if(i<0)return;
+        var j=Math.max(0,Math.min(ids.length-1,i+pasos));
+        if(j===i)return;
+        ids.splice(i,1); ids.splice(j,0,id);
+        doc.rackOrder=doc.rackOrder||{}; doc.rackOrder[zone]=ids;
+        state.rackSel=id; save(); renderRack();
+      }
+      window.addEventListener('mousemove',mm); window.addEventListener('mouseup',mu);
+    });
+  });
+}

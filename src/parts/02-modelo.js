@@ -173,7 +173,7 @@ function applyDoc(d){
   layout(); rebuildUI(); render(); renderList(); showDetail();
   applyTitle();
 }
-function save(){ let ok=true;
+function save(){ let ok=true; try{ if(typeof bakPush==='function')bakPush(false); }catch(e){}
   try{ if(!PROJ.cur)PROJ.cur=newId(); localStorage.setItem(dkey(PROJ.cur),JSON.stringify(doc)); }catch(e){ ok=false; }
   projTouch();
   const b=document.getElementById('dirty');

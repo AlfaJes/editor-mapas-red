@@ -86,6 +86,7 @@ function render(){
     const a=byId[e.s],b=byId[e.t];
     return `<text class="elab" x="${(a.x+b.x)/2}" y="${(a.y+b.y)/2-6}" text-anchor="middle">${escAttr(e.etq)}</text>`;
   }).join(''):'';
+  updateMsbar();
 }
 function renderList(){
   const l=document.getElementById('list'),items=nodes.filter(vis);
@@ -97,6 +98,7 @@ function renderList(){
     <span style="min-width:0;flex:1"><div class="iname">${n.nombre}</div>
     <div class="iip">${n.ip.length?n.ip.join(' · '):cut(n.zona,26)}</div></span></div>`).join('');
   l.querySelectorAll('.item').forEach(el=>el.onclick=()=>select(el.dataset.id,true));
+  updateMsbar();
   if(state.view==='rack')renderRack();
 }
 function select(id,center){

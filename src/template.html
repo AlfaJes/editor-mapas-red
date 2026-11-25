@@ -1,4 +1,11 @@
-<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Mapa de Red · Delegación de Levante</title><style>/*__CSS__*/</style></head><body><div class="app"><header>
+<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Mapa de Red · Delegación de Levante</title><style>
+.msbar{position:fixed;left:50%;transform:translateX(-50%);bottom:46px;display:none;gap:5px;align-items:center;
+  background:#0f1a2c;border:1px solid #24344f;border-radius:10px;padding:6px 9px;z-index:40;box-shadow:0 10px 26px rgba(0,0,0,.5)}
+.msbar.on{display:flex}
+.msbar .msc{font-size:10.5px;color:#9db2d0;margin-right:4px;white-space:nowrap}
+.msbar .msep{width:1px;height:18px;background:#24344f;margin:0 3px}
+#map{touch-action:none}
+/*__CSS__*/</style></head><body><div class="app"><header>
   <div class="hrow hrow1">
     <div class="hbrand">
       <h1 id="ttl" contenteditable="true" spellcheck="false" title="Clic para editar el título">MAPA DE RED · DELEGACIÓN DE LEVANTE</h1>
@@ -111,6 +118,9 @@
     <button class="btn" id="p_imp">Importar JSON</button>
   </div>
   <div class="plist2" id="p_list"></div>
+  <details style="margin-top:12px" id="bakbox"><summary style="font-size:11.5px;color:#9db2d0;cursor:pointer">Copias de seguridad automáticas</summary>
+    <div id="p_bak" style="max-height:26vh;overflow:auto;margin-top:8px"></div>
+  </details>
   <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px">
     <button class="btn" id="p_html">Descargar HTML</button>
     <button class="btn" id="p_json">Descargar JSON</button>
@@ -176,7 +186,21 @@
   <button class="btn on" id="m_ok">Crear equipo</button></div>
 </div></div>
 
-<div class="detail" id="detail"></div><div class="tip" id="tip"></div></div>
+<div class="detail" id="detail"></div><div class="tip" id="tip"></div>
+<div id="msbar" class="msbar">
+  <span class="msc">3 equipos</span>
+  <button class="btn sm" data-al="l" title="Alinear a la izquierda">⬅</button>
+  <button class="btn sm" data-al="cx" title="Centrar en horizontal">↔</button>
+  <button class="btn sm" data-al="r" title="Alinear a la derecha">➡</button>
+  <button class="btn sm" data-al="t" title="Alinear arriba">⬆</button>
+  <button class="btn sm" data-al="cy" title="Centrar en vertical">↕</button>
+  <button class="btn sm" data-al="b" title="Alinear abajo">⬇</button>
+  <span class="msep"></span>
+  <button class="btn sm" data-al="dh" title="Separar igual en horizontal">⇹</button>
+  <button class="btn sm" data-al="dv" title="Separar igual en vertical">⇳</button>
+  <span class="msep"></span>
+  <button class="btn sm" data-al="q" title="Cerrar">✕</button>
+</div></div>
 <div id="presbar" class="presbar"><span id="presname">Mapa de red</span> · pulsa Esc o aquí para salir</div>
 <script id="seed-data" type="application/json">{}</script>
 <script>//__JS__</script></body></html>
