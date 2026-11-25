@@ -340,59 +340,81 @@ body.viewrack #rack{display:block}
   color:#e8eefb;padding:7px 9px;font-size:12px;font-family:inherit}
 .mf textarea{resize:vertical;min-height:56px}
 .mact{display:flex;justify-content:flex-end;gap:8px;margin-top:6px}
+
+/* --- barra en dos filas --- */
+header{grid-column:1/-1;display:flex;flex-direction:column;gap:0;padding:0;align-items:stretch;
+  background:linear-gradient(180deg,rgba(22,34,58,.97),rgba(15,25,44,.9));border-bottom:1px solid var(--line);
+  backdrop-filter:blur(10px);z-index:5}
+.hrow{display:flex;align-items:center;gap:9px;padding:10px 16px;flex-wrap:wrap;width:100%}
+.hrow1{padding-bottom:7px}
+.hrow2{gap:6px;border-top:1px solid rgba(32,48,74,.8);padding-top:8px;padding-bottom:10px}
+.hbrand{display:flex;flex-direction:column;min-width:260px;max-width:44vw}
+.hact{display:flex;align-items:center;gap:6px;flex-wrap:wrap;position:relative;margin-left:auto}
+.glabel{font-size:9.5px;letter-spacing:.11em;text-transform:uppercase;color:#5f7797}
+.gsep{width:1px;height:18px;background:#22314b;margin:0 3px}
+.btn.sm{padding:5px 9px;font-size:11.5px;border-radius:7px}
+.btn.tog{background:#101c30;color:#9db2d0}
+.btn.tog.on{background:#17263f;color:#eef5ff;border-color:#33507a}
+.btn.pri{background:#1b3a62;border-color:#2f5d97;color:#eaf3ff}
+.btn.pri.on{background:#2c6fb8;border-color:#4b93e0;color:#fff}
+.btn.icon{padding:6px 11px;font-size:15px;line-height:1}
+#moreMenu{top:calc(100% + 6px);right:0;left:auto}
+#dirty:empty{display:none}
+.chips .chip b{color:#e8f1ff}
 </style></head><body><div class="app"><header>
-  <div><h1 id="ttl" contenteditable="true" spellcheck="false" title="Clic para editar el título">MAPA DE RED · DELEGACIÓN DE LEVANTE</h1>
-    <div class="sub" id="sub" contenteditable="true" spellcheck="false" title="Clic para editar el subtítulo">Centro productivo de Levante · Control Glass A&amp;S · editor interactivo</div></div>
-  <div class="chips">
-    <span class="chip"><b id="total">0</b> dispositivos</span>
-    <span class="chip"><b id="nEdges">0</b> enlaces</span>
-    <span class="chip"><b id="nZonas">0</b> zonas</span>
-    <span class="chip"><b id="count">0</b> visibles</span>
-    <span class="chip" id="dirty"></span>
-  </div>
-  <div class="btns">
-    <div class="grp">
-      <button class="btn" id="bEdit">✎ Edición</button>
-      <button class="btn" id="bAdd" style="display:none">＋ Equipo</button>
-      <button class="btn" id="bNote" style="display:none">＋ Texto</button>
-      <button class="btn" id="bArrow" style="display:none">↗ Flecha</button>
-      <button class="btn" id="bLink" style="display:none">⇄ Enlace</button>
-      <button class="btn" id="bUndo" style="display:none">↶ Deshacer</button>
+  <div class="hrow hrow1">
+    <div class="hbrand">
+      <h1 id="ttl" contenteditable="true" spellcheck="false" title="Clic para editar el título">MAPA DE RED · DELEGACIÓN DE LEVANTE</h1>
+      <div class="sub" id="sub" contenteditable="true" spellcheck="false" title="Clic para editar el subtítulo">Centro productivo de Levante · Control Glass A&amp;S · editor interactivo</div>
     </div>
-    <div class="grp">
-      <button class="btn on" id="bLabels">Etiquetas</button>
-      <button class="btn on" id="bIp">IPs</button>
-      <button class="btn on" id="bEdges">Cables</button>
-      <button class="btn on" id="bHull">Cajas</button>
-      <button class="btn" id="bGrid">▦ Rejilla</button>
-      <button class="btn" id="bSide">◀ Panel</button>
-      <button class="btn" id="bEdge">Curvo</button>
+    <div class="chips">
+      <span class="chip"><b id="total">0</b> equipos</span>
+      <span class="chip"><b id="nEdges">0</b> enlaces</span>
+      <span class="chip"><b id="nZonas">0</b> secciones</span>
+      <span class="chip" id="dirty"></span>
     </div>
-    <div class="grp">
-      <button class="btn" id="bRack">🗄 Rack</button>
-      <button class="btn" id="bZonas">🗂 Secciones</button>
-      <button class="btn" id="bPath">🧭 Ruta</button>
-      <button class="btn" id="bCheck">⚠ Revisión</button>
-      <button class="btn" id="bProj">📁 Proyectos</button>
-    </div>
-    <div class="grp">
-      <button class="btn" id="bFit">⤢ Ajustar</button>
-      <button class="btn" id="bPres">🖥 Presentar</button>
-      <button class="btn" id="bMore">⋯</button>
-    </div>
-    <div class="menu" id="moreMenu">
-      <button class="btn" id="bSave">Exportar JSON</button>
-      <button class="btn" id="bOpen">Abrir JSON</button>
-      <button class="btn" id="bPng">Imagen PNG</button>
-      <button class="btn" id="bPdf">PDF (A4 horizontal)</button>
+    <div class="hact">
+      <button class="btn pri" id="bEdit" title="Activar o desactivar el modo edición">✎ Editar</button>
+      <button class="btn" id="bAdd" style="display:none" title="Añadir un equipo">＋ Equipo</button>
+      <button class="btn" id="bNote" style="display:none" title="Añadir un cajón de texto">＋ Texto</button>
+      <button class="btn" id="bArrow" style="display:none" title="Añadir una flecha">↗ Flecha</button>
+      <button class="btn" id="bLink" style="display:none" title="Conectar dos equipos">⇄ Conectar</button>
+      <button class="btn" id="bUndo" style="display:none" title="Deshacer (Ctrl+Z)">↶ Deshacer</button>
+      <span class="gsep"></span>
+      <button class="btn" id="bFit" title="Encajar todo el mapa en la pantalla">⤢ Encajar</button>
+      <button class="btn" id="bPres" title="Ver a pantalla completa">🖥 Presentar</button>
+      <button class="btn icon" id="bMore" title="Más acciones: exportar, importar, reordenar…">⋯</button>
+      <div class="menu" id="moreMenu">
+        <button class="btn" id="bSave">Exportar JSON</button>
+        <button class="btn" id="bOpen">Abrir JSON</button>
+        <button class="btn" id="bPng">Imagen PNG</button>
+        <button class="btn" id="bPdf">PDF (A4 horizontal)</button>
         <button class="btn on" id="bApp">💾 Guardar copia actualizada (HTML)</button>
-      <button class="btn" id="bCsv">Inventario CSV</button>
-      <button class="btn" id="bRelayout">Reordenar por rejilla</button>
-      <button class="btn danger" id="bReset">Restaurar plantilla</button>
-    </div>
-    <input type="color" id="cpick" style="position:fixed;left:-100px;top:-100px">
-    <input type="file" id="fFile" accept=".json,application/json" style="display:none">
+        <button class="btn" id="bCsv">Inventario CSV</button>
+        <button class="btn" id="bRelayout">Reordenar por rejilla</button>
+        <button class="btn danger" id="bReset">Restaurar plantilla</button>
       </div>
+    </div>
+  </div>
+  <div class="hrow hrow2">
+    <span class="glabel">Mostrar</span>
+    <button class="btn sm tog on" id="bIp">IPs</button>
+    <button class="btn sm tog on" id="bLabels">Etiquetas</button>
+    <button class="btn sm tog on" id="bEdges">Cables</button>
+    <button class="btn sm tog on" id="bHull">Cajas</button>
+    <button class="btn sm tog" id="bGrid">Rejilla</button>
+    <button class="btn sm" id="bEdge" title="Forma de los cables">Curvo</button>
+    <span class="gsep"></span>
+    <span class="glabel">Paneles</span>
+    <button class="btn sm tog" id="bSide" title="Ocultar o mostrar la lista de equipos">◧ Equipos</button>
+    <button class="btn sm" id="bRack" title="Vista de rack por puertos">🗄 Rack</button>
+    <button class="btn sm" id="bZonas" title="Crear, renombrar y borrar secciones">🗂 Secciones</button>
+    <button class="btn sm" id="bPath" title="Calcular ruta entre dos equipos">🧭 Ruta</button>
+    <button class="btn sm" id="bCheck" title="Avisos de configuración">⚠ Revisión</button>
+    <button class="btn sm" id="bProj" title="Proyectos guardados">📁 Proyectos</button>
+  </div>
+  <input type="color" id="cpick" style="position:fixed;left:-100px;top:-100px">
+  <input type="file" id="fFile" accept=".json,application/json" style="display:none">
 </header>
 <aside>
   <div class="search"><input id="q" type="search" placeholder="Buscar equipo, IP, MAC, modelo…" autocomplete="off"></div>
@@ -2807,8 +2829,10 @@ document.getElementById('bSide').onclick=function(){
   var on=!document.body.classList.contains('noside');
   document.body.classList.toggle('noside',on);
   setBtn('bSide',on);
+  try{ localStorage.setItem('nm_side',on?'1':'0'); }catch(e){}
   setTimeout(function(){ fit(); },40);
 };
+try{ if(localStorage.getItem('nm_side')==='1'){ document.body.classList.add('noside'); setBtn('bSide',true); } }catch(e){}
 
 document.getElementById('bPdf').onclick=function(){var m=document.getElementById('moreMenu');if(m)m.classList.remove('on');exportPDF();};
 document.getElementById('fColor').onchange=function(e){ state.colorBy=e.target.value; render(); renderList(); };
