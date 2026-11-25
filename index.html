@@ -419,6 +419,7 @@ body.viewrack #rack{display:block}
     <label style="font-size:10px;color:#7d93b3">Ancho<br><input id="n_w" type="number" min="90" max="600" step="10" value="220" style="width:74px"></label>
     <label style="font-size:10px;color:#7d93b3">Color<br><input id="n_col" type="color" value="#8fc7ff" style="width:46px;height:26px;padding:0"></label>
     <label style="font-size:10px;color:#7d93b3">Sección<br><select id="n_zone" style="max-width:150px"><option value="">— suelto —</option></select></label>
+    <label style="font-size:10px;color:#7d93b3" id="n_style_wrap">Estilo<br><select id="n_style"><option value="line">Línea con punta</option><option value="dash">Discontinua</option><option value="dotted">Punteada</option><option value="double">Doble punta</option><option value="block">Bloque</option></select></label>
   </div>
   <div class="hintbox" style="margin-top:10px">Puedes cambiar el tama\u00f1o arrastrando la esquina inferior derecha del caj\u00f3n en el mapa.</div>
   <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px">
@@ -2433,6 +2434,7 @@ function openNote(id){
   document.getElementById('n_w').value=nn?(nn.w||220):220;
   document.getElementById('n_col').value=nn&&nn.col?nn.col:'#8fc7ff';
   document.getElementById('n_del').style.display=nn?'':'none';
+  var wsw0=document.getElementById('n_style_wrap'); if(wsw0)wsw0.style.display='none';
   var zsel=document.getElementById('n_zone');
   if(zsel){
     var zz=(typeof zonas!=='undefined'?zonas:[]).slice().sort(function(x,y){return x.localeCompare(y,'es');});
@@ -2447,6 +2449,7 @@ function openEdgeNote(ed){
   if(!ed)return;
   NT={kind:'edge',e:ed};
   state.noteId=null;
+  var wswE=document.getElementById('n_style_wrap'); if(wswE)wswE.style.display='none';
   var nt=ed.nt||{};
   document.getElementById('n_text').value=nt.t||'';
   document.getElementById('n_sz').value=nt.sz||12;
@@ -2464,6 +2467,7 @@ function saveNote(){
   if(NT.kind==='arrow'&&NT.ar){
     snap();
     NT.ar.t=txt; NT.ar.col=col; NT.ar.w=w;
+    var stEl=document.getElementById('n_style'); if(stEl)NT.ar.st=stEl.value||'line';
     NT.ar.sw=Math.max(1,Math.min(9,parseInt(document.getElementById('n_sz').value)||2));
     save(); render(); document.getElementById('nmodal').classList.remove('on'); return;
   }
@@ -2570,10 +2574,32 @@ function zoneCenter(z){
   var b=ZBOX.filter(function(q){return q.z===z;})[0];
   return b?[b.x+b.w/2,b.y+b.h/2]:null;
 }
+function boxOf(z){ return ZBOX.filter(function(q){return q.z===z;})[0]||null; }
+function rawPt(a,end){
+  var nid=(end===2)?a.n2:a.n1, zid=(end===2)?a.z2:a.z1;
+  if(nid&&byId[nid])return [byId[nid].x,byId[nid].y];
+  if(zid){var b=boxOf(zid); if(b)return [b.x+b.w/2,b.y+b.h/2];}
+  return (end===2)?[a.x2,a.y2]:[a.x1,a.y1];
+}
+function borderPoint(b,from){
+  if(!b)return from;
+  var cx=b.x+b.w/2, cy=b.y+b.h/2;
+  var fx=from[0], fy=from[1];
+  if(fx>=b.x&&fx<=b.x+b.w&&fy>=b.y&&fy<=b.y+b.h) return [fx,fy];
+  var dx=fx-cx, dy=fy-cy;
+  if(!dx&&!dy) return [cx,cy];
+  var tx=(dx>0)?((b.x+b.w-cx)/dx):((b.x-cx)/dx);
+  var ty=(dy>0)?((b.y+b.h-cy)/dy):((b.y-cy)/dy);
+  var t=Math.min(Math.abs(tx),Math.abs(ty));
+  return [cx+dx*t, cy+dy*t];
+}
 function arrowPt(a,end){
   var nid=(end===2)?a.n2:a.n1, zid=(end===2)?a.z2:a.z1;
   if(nid&&byId[nid])return [byId[nid].x,byId[nid].y];
-  if(zid){var c=zoneCenter(zid); if(c)return c;}
+  if(zid){
+    var b=boxOf(zid);
+    if(b)return borderPoint(b, rawPt(a, end===2?1:2));
+  }
   return (end===2)?[a.x2,a.y2]:[a.x1,a.y1];
 }
 function arrowsHTML(){
@@ -2582,14 +2608,33 @@ function arrowsHTML(){
     var col=a.col||'#ffd7a1', sw=a.sw||2.2;
     var P1=arrowPt(a,1), P2=arrowPt(a,2);
     a.x1=P1[0]; a.y1=P1[1]; a.x2=P2[0]; a.y2=P2[1];
-    var ang=Math.atan2(a.y2-a.y1,a.x2-a.x1);
-    var L=Math.max(11,sw*5.5);
-    var ax=a.x2-L*Math.cos(ang-Math.PI/7), ay=a.y2-L*Math.sin(ang-Math.PI/7);
-    var bx=a.x2-L*Math.cos(ang+Math.PI/7), by=a.y2-L*Math.sin(ang+Math.PI/7);
-    var s='<g class="arrow" data-aid="'+a.id+'">'+
-      '<line x1="'+a.x1+'" y1="'+a.y1+'" x2="'+a.x2+'" y2="'+a.y2+'" stroke="'+col+'" stroke-width="'+sw+'" stroke-linecap="round"/>'+
-      '<polygon points="'+a.x2+','+a.y2+' '+ax.toFixed(1)+','+ay.toFixed(1)+' '+bx.toFixed(1)+','+by.toFixed(1)+'" fill="'+col+'"/>'+
-      '<line class="ahit" data-aid="'+a.id+'" x1="'+a.x1+'" y1="'+a.y1+'" x2="'+a.x2+'" y2="'+a.y2+'" stroke="transparent" stroke-width="16"/>';
+    var st=a.st||'line';
+    var x1=a.x1,y1=a.y1,x2=a.x2,y2=a.y2;
+    var ang=Math.atan2(y2-y1,x2-x1), L=Math.max(11,sw*5.5);
+    var dash=(st==='dash')?' stroke-dasharray="9 6"':(st==='dotted'?' stroke-dasharray="2 6"':'');
+    var s='<g class="arrow" data-aid="'+a.id+'">';
+    if(st==='block'){
+      var len=Math.sqrt((x2-x1)*(x2-x1)+(y2-y1)*(y2-y1))||1;
+      var ux=(x2-x1)/len, uy=(y2-y1)/len, px=-uy, py=ux;
+      var hw=Math.max(4,sw*2.2), hl=Math.max(13,sw*6), hw2=Math.max(9,sw*4.2);
+      var bx=x2-ux*hl, by=y2-uy*hl;
+      var pts=[[x1+px*hw,y1+py*hw],[bx+px*hw,by+py*hw],[bx+px*hw2,by+py*hw2],[x2,y2],
+               [bx-px*hw2,by-py*hw2],[bx-px*hw,by-py*hw],[x1-px*hw,y1-py*hw]]
+        .map(function(q){return q[0].toFixed(1)+','+q[1].toFixed(1);}).join(' ');
+      s+='<polygon points="'+pts+'" fill="'+col+'"/>';
+    } else {
+      s+='<line x1="'+x1+'" y1="'+y1+'" x2="'+x2+'" y2="'+y2+'" stroke="'+col+'" stroke-width="'+sw+'" stroke-linecap="round"'+dash+'/>';
+      var ax=x2-L*Math.cos(ang-Math.PI/7), ay=y2-L*Math.sin(ang-Math.PI/7);
+      var bx2=x2-L*Math.cos(ang+Math.PI/7), by2=y2-L*Math.sin(ang+Math.PI/7);
+      s+='<polygon points="'+x2+','+y2+' '+ax.toFixed(1)+','+ay.toFixed(1)+' '+bx2.toFixed(1)+','+by2.toFixed(1)+'" fill="'+col+'"/>';
+      if(st==='double'){
+        var a2=Math.atan2(y1-y2,x1-x2);
+        var cx1=x1-L*Math.cos(a2-Math.PI/7), cy1=y1-L*Math.sin(a2-Math.PI/7);
+        var cx2=x1-L*Math.cos(a2+Math.PI/7), cy2=y1-L*Math.sin(a2+Math.PI/7);
+        s+='<polygon points="'+x1+','+y1+' '+cx1.toFixed(1)+','+cy1.toFixed(1)+' '+cx2.toFixed(1)+','+cy2.toFixed(1)+'" fill="'+col+'"/>';
+      }
+    }
+    s+='<line class="ahit" data-aid="'+a.id+'" x1="'+x1+'" y1="'+y1+'" x2="'+x2+'" y2="'+y2+'" stroke="transparent" stroke-width="16"/>';
     if(a.t){
       var lw=a.w||160, lines=noteLines(a.t,lw,11);
       var hh=lines.length*11*1.35+12;
@@ -2623,6 +2668,8 @@ function openArrow(ar){
   document.getElementById('n_sz').value=ar.sw||2;
   document.getElementById('n_w').value=ar.w||160;
   document.getElementById('n_col').value=ar.col||'#ffd7a1';
+  var wsw=document.getElementById('n_style_wrap'); if(wsw)wsw.style.display='';
+  var sts=document.getElementById('n_style'); if(sts)sts.value=ar.st||'line';
   document.getElementById('n_del').style.display='';
   document.getElementById('nmodal').classList.add('on');
   setTimeout(function(){ document.getElementById('n_text').focus(); },60);
