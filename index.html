@@ -135,6 +135,7 @@ color:#dbe9ff;font:inherit;font-size:11px;padding:3px 5px}
 .arrow{cursor:move}
 .ah{fill:rgba(79,140,255,.45);stroke:#6ea8ff;stroke-width:1.4;cursor:pointer}
 .ah.vin{fill:#ffd7a1;stroke:#b98a3f}
+.portsl{background:#0c1626;border:1px solid #26374f;border-radius:5px;color:#dbe9ff;padding:2px 4px}
 .ahit{stroke:transparent;stroke-width:16;cursor:move;fill:none}
 .ehadd{fill:rgba(79,140,255,.25);stroke:#6ea8ff;stroke-width:1;cursor:copy;opacity:.7}
 .ehadd:hover{opacity:1;fill:rgba(79,140,255,.55)}
@@ -525,10 +526,67 @@ function nextFree(hostId){
   const u=new Set(doc.edges.filter(e=>e.h===hostId&&e.port).map(e=>e.port));
   let p=1; while(u.has(p))p++; return p;
 }
+function portSel(e,side){
+  var id=(side==='s')?e.s:e.t, dev=byId[id];
+  if(!dev)return '';
+  var cap=capFor(id), cur=((side==='s')?e.pA:e.pB)||1;
+  var ops='';
+  for(var i=1;i<=cap;i++)ops+='<option value="'+i+'"'+(i===cur?' selected':'')+'>'+i+'</option>';
+  return '<select id="e_p'+side+'" class="portsl">'+ops+'</select> '+
+    '<span style="color:#7d93b3">'+escAttr(dev.nombre)+'</span>';
+}
+function capFor(id){
+  var n=byId[id]; if(!n)return 8;
+  var c=Math.max(parseInt(n.puertos)||0,(n.ports&&n.ports.length)||0);
+  doc.edges.forEach(function(e){ if(e.s===id&&e.pA>c)c=e.pA; if(e.t===id&&e.pB>c)c=e.pB; });
+  var base=(n.tipo==='switch'||n.tipo==='router'||n.tipo==='firewall')?8:2;
+  return Math.max(base,c||0)+1;
+}
+function freePort(id,side,except){
+  var used={};
+  doc.edges.forEach(function(e){
+    if(e===except)return;
+    if(e.s===id&&e.pA)used[e.pA]=1;
+    if(e.t===id&&e.pB)used[e.pB]=1;
+  });
+  var cap=capFor(id);
+  for(var p=1;p<=cap;p++) if(!used[p]) return p;
+  return cap+1;
+}
+function syncRackPort(e){
+  if(!e.h||!byId[e.h])e.h=hostOf(e.s,e.t).id;
+  e.port = (e.h===e.s)? (e.pA||1) : (e.pB||1);
+}
+function dedupePorts(){
+  var seen={};
+  function pick(id){
+    var cap=capFor(id);
+    for(var p=1;p<=cap+40;p++){ if(!seen[id+':'+p]) return p; }
+    return cap+41;
+  }
+  doc.edges.forEach(function(e){
+    var k1=e.s+':'+e.pA;
+    if(seen[k1]){ e.pA=pick(e.s); k1=e.s+':'+e.pA; }
+    seen[k1]=1;
+    var k2=e.t+':'+e.pB;
+    if(seen[k2]){ e.pB=pick(e.t); k2=e.t+':'+e.pB; }
+    seen[k2]=1;
+  });
+  doc.edges.forEach(syncRackPort);
+}
 function ensureEdges(){
   doc.edges=doc.edges.filter(e=>byId[e.s]&&byId[e.t]&&e.s!==e.t);
   doc.edges.forEach(e=>{ if(!e.h||!byId[e.h])e.h=hostOf(e.s,e.t).id; e.port=parseInt(e.port)||0;
     if(typeof e.bx==='number'&&!Array.isArray(e.pts))e.pts=[[e.bx,e.by]]; });
+  doc.edges.forEach(function(e){
+    if(typeof e.pA!=='number'||typeof e.pB!=='number'){
+      var pt=parseInt(e.port)||0;
+      if(typeof e.pA!=='number') e.pA=(e.h===e.s&&pt)?pt:freePort(e.s,'s',e);
+      if(typeof e.pB!=='number') e.pB=(e.h===e.t&&pt)?pt:freePort(e.t,'t',e);
+    }
+    syncRackPort(e);
+  });
+  dedupePorts(); dedupePorts();
   const used={};
   doc.edges.forEach(e=>{ if(e.port){(used[e.h]=used[e.h]||new Set()).add(e.port);} });
   doc.edges.forEach(e=>{ if(!e.port){const u=used[e.h]=used[e.h]||new Set();let p=1;while(u.has(p))p++;u.add(p);e.port=p;} });
@@ -1071,20 +1129,28 @@ function centerOn(n){const W=svg.clientWidth||1200,H=svg.clientHeight||800;
   t.x=W/2-n.x*t.k; t.y=H/2-n.y*t.k; applyT();}
 
 const v=x=>x&&x!==''?x:'—';
+function mineOn(nid){
+  return doc.edges.map(function(e){
+    if(e.s===nid)return {port:e.pA||1,other:e.t,e:e};
+    if(e.t===nid)return {port:e.pB||1,other:e.s,e:e};
+    return null;
+  }).filter(Boolean);
+}
 function portGrid(n){
   const cap=parseInt(n.puertos)||0;
-  const mine=doc.edges.filter(e=>e.h===n.id);
-  const N=cap>0?Math.max(cap,...mine.map(e=>e.port)):Math.max(8,...mine.map(e=>e.port));
+  const mine=mineOn(n.id);
+  const maxP=mine.length?Math.max.apply(null,mine.map(function(x){return x.port;})):0;
+  const N=Math.max(cap||8,maxP,8);
   let cells='';
   for(let p=1;p<=N;p++){
-    const e=mine.find(x=>x.port===p);
-    if(e){const d=byId[e.s===n.id?e.t:e.s];
-      cells+=`<div class="pcell on" data-id="${d.id}" title="${d.nombre}">${p}<span class="d" style="background:${col(d)}"></span></div>`;}
+    const it=mine.find(x=>x.port===p);
+    if(it){const d=byId[it.other];
+      cells+=`<div class="pcell on" data-id="${d.id}" title="${escAttr(d.nombre)}">${p}<span class="d" style="background:${col(d)}"></span></div>`;}
     else cells+=`<div class="pcell">${p}</div>`;
   }
-  const list=mine.slice().sort((a,b)=>a.port-b.port).map(e=>{
-    const d=byId[e.s===n.id?e.t:e.s];
-    return d?`<div class="prowC" data-id="${d.id}"><b>P${e.port}</b><span>${escAttr(d.nombre)}</span><i>${escAttr((TYPE[d.tipo]||['',''])[1])}</i></div>`:'';
+  const list=mine.slice().sort((a,b)=>a.port-b.port).map(it=>{
+    const d=byId[it.other];
+    return d?`<div class="prowC" data-id="${d.id}"><b>P${it.port}</b><span>${escAttr(d.nombre)}</span><i>${escAttr((TYPE[d.tipo]||['',''])[1])}</i></div>`:'';
   }).join('');
   return `<div class="pcap"><span>Puertos · clic para abrir el equipo</span><span>${mine.length}/${N}</span></div>
     <div class="pgrid">${cells}</div>
@@ -1247,8 +1313,8 @@ function fieldsHTML(pre,tipo,n){
     }
     return `<div class="fld"><label>${f.l}</label><input id="${id}" value="${String(v==null?'':v).replace(/"/g,'&quot;')}" placeholder="${f.ph||''}"></div>`;
   }).join('');
-  const portsv=(n&&n.id&&(tipo==='switch'||tipo==='router'||tipo==='firewall'))?portGrid(n):'';
-  const ports=(tipo==='switch'||tipo==='router'||tipo==='firewall')?portsHTML(pre,n):'';
+  const portsv=(n&&n.id&&doc.edges.some(function(e){return e.s===n.id||e.t===n.id;}))?portGrid(n):'';
+  const ports=portsHTML(pre,n);
   return head+body+portsv+ports;
 }
 function bindChips(root){
@@ -1308,9 +1374,9 @@ const PTIPOS=['Cobre RJ45','Cobre RJ45 PoE','Fibra SFP','Fibra SFP+','Fibra SFP2
 const PVELS=['10 Mbps','100 Mbps','1 Gbps','2,5 Gbps','5 Gbps','10 Gbps','25 Gbps','40 Gbps','100 Gbps'];
 let PHOST='';
 function portConn(hostId,num){
-  const e=doc.edges.filter(x=>x.h===hostId&&x.port===num)[0];
-  if(!e)return null;
-  const o=byId[e.s===hostId?e.t:e.s];
+  const it=mineOn(hostId).filter(function(x){return x.port===num;})[0];
+  if(!it)return null;
+  const o=byId[it.other];
   return o?{id:o.id,nombre:o.nombre}:null;
 }
 function portRowHTML(p){
@@ -1474,12 +1540,8 @@ function showDetail(){
       d.innerHTML=`<div class="dtitle">Conexión</div>
         <div class="dtype">${A.nombre} — ${B.nombre}</div>
         <dl class="kv">
-          <dt>Puerto</dt><dd>${(()=>{const hs=ed0.h&&byId[ed0.h];
-            const inv=(hs&&Array.isArray(hs.ports))?hs.ports.length:0;
-            const cap=Math.max(8,parseInt(hs&&hs.puertos)||0,inv,...doc.edges.filter(x=>x.h===ed0.h).map(x=>x.port||0))+1;
-            let ops="";for(let i=1;i<=cap;i++)ops+=`<option value="${i}"${i===ed0.port?" selected":""}>${i}</option>`;
-            return `<select id="e_port" style="background:#0c1626;border:1px solid #26374f;border-radius:5px;color:#dbe9ff;padding:2px 4px">${ops}</select>`+
-              (hs?` <span style="color:#7d93b3">\u00b7 ${escAttr(hs.nombre)}</span>`:"");})()}</dd>
+                    <dt>Puerto en ${escAttr(A.nombre)}</dt><dd>${portSel(ed0,'s')}</dd>
+          <dt>Puerto en ${escAttr(B.nombre)}</dt><dd>${portSel(ed0,'t')}</dd>
           <dt>Color</dt><dd><input type="color" id="e_col" value="${ed0.color||'#6ea8ff'}"
              style="width:34px;height:20px;border:none;background:none;padding:0"></dd>
           <dt>Trazado</dt><dd>${(Array.isArray(ed0.pts)&&ed0.pts.length)?ed0.pts.length+' punto'+(ed0.pts.length>1?'s':'')+' a mano':(doc.estyle||'curvo')}</dd>
@@ -1499,19 +1561,29 @@ function showDetail(){
         ${state.edit?`<button class="btn danger" id="e_del" style="margin-top:8px;width:100%">Eliminar enlace</button>`:''}
         <div class="hint" style="margin-top:10px;font-size:11px;color:#7d93b3">
           Arrastra el punto azul del cable para moverlo a tu gusto.</div>`;
-      const psel=document.getElementById('e_port');
-      if(psel)psel.onchange=function(ev){
-        const np=parseInt(ev.target.value)||0; if(!np||np===ed0.port)return;
-        const busy=doc.edges.filter(function(x){return x!==ed0&&x.h===ed0.h&&x.port===np;})[0];
-        if(busy){
-          const otra=byId[busy.s===ed0.h?busy.t:busy.s];
-          if(!confirm('El puerto '+np+' ya est\u00e1 ocupado por '+(otra?otra.nombre:'otro equipo')+'. \u00bfIntercambiar los dos puertos?')){
-            render(); showDetail(); return;
+      ['s','t'].forEach(function(side){
+        var sel=document.getElementById('e_p'+side); if(!sel)return;
+        sel.onchange=function(ev){
+          var np=parseInt(ev.target.value)||0; if(!np)return;
+          var id=(side==='s')?ed0.s:ed0.t;
+          var cur=(side==='s')?ed0.pA:ed0.pB;
+          if(np===cur)return;
+          var busy=doc.edges.filter(function(x){
+            if(x===ed0)return false;
+            if(side==='s')return x.s===id&&x.pA===np;
+            return x.t===id&&x.pB===np;
+          })[0];
+          if(busy){
+            var otra=byId[busy.s===id?busy.t:busy.s];
+            if(!confirm('El puerto '+np+' de '+(byId[id]||{}).nombre+' ya est\u00e1 ocupado por '+(otra?otra.nombre:'otro equipo')+'. \u00bfIntercambiar los dos puertos?')){ showDetail(); return; }
           }
-          busy.port=ed0.port;
-        }
-        snap(); ed0.port=np; save(); render(); showDetail();
-      };
+          snap();
+          if(side==='s')ed0.pA=np; else ed0.pB=np;
+          if(busy){ if(side==='s')busy.pA=cur; else busy.pB=cur; syncRackPort(busy); }
+          syncRackPort(ed0);
+          save(); render(); showDetail();
+        };
+      });
       const cc=document.getElementById('e_col');
       if(cc)cc.oninput=ev=>{ed0.color=ev.target.value;save();render();};
       const eq=document.getElementById('e_etq');
@@ -1671,7 +1743,7 @@ function addLink(a,b){
   if(!a||!b||a===b||!byId[a]||!byId[b])return;
   if(doc.edges.some(e=>(e.s===a&&e.t===b)||(e.s===b&&e.t===a)))return;
   const hs=hostOf(a,b);
-  snap(); doc.edges.push({s:a,t:b,h:hs.id,port:nextFree(hs.id)});
+  snap(); doc.edges.push({s:a,t:b,h:hs.id,port:nextFree(hs.id),pA:freePort(a,'s'),pB:freePort(b,'t')});
   save(); rebuild(); render(); renderList(); showDetail();
 }
 function delLink(s,t){
