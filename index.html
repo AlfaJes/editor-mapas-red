@@ -360,6 +360,8 @@ header{grid-column:1/-1;display:flex;flex-direction:column;gap:0;padding:0;align
 .btn.pri.on{background:#2c6fb8;border-color:#4b93e0;color:#fff}
 .btn.icon{padding:6px 11px;font-size:15px;line-height:1}
 #moreMenu{top:calc(100% + 6px);right:0;left:auto}
+.plist select.psel{background:#0c1626;border:1px solid #26374f;color:#dbe9ff;border-radius:5px;font-size:11px;padding:1px 3px;margin-right:7px;cursor:pointer}
+.plist select.psel:hover{border-color:#3b5c8a}
 #dirty:empty{display:none}
 #gPing{pointer-events:none}
 #p_body .prowC b{white-space:nowrap;font-size:10.5px}
@@ -1192,23 +1194,48 @@ function mineOn(nid){
 }
 function portGrid(n){
   const cap=parseInt(n.puertos)||0;
-  const mine=mineOn(n.id);
-  const maxP=mine.length?Math.max.apply(null,mine.map(function(x){return x.port;})):0;
-  const N=Math.max(cap||8,maxP,8);
+  const items=[];
+  doc.edges.forEach(function(e,idx){
+    if(e.s===n.id)items.push({port:e.pA||1,other:e.t,e:e,idx:idx,side:'s'});
+    else if(e.t===n.id)items.push({port:e.pB||1,other:e.s,e:e,idx:idx,side:'t'});
+  });
+  const capN=capFor(n.id);
+  const N=Math.max(cap||8, capN);
   let cells='';
   for(let p=1;p<=N;p++){
-    const it=mine.find(x=>x.port===p);
+    const it=items.find(x=>x.port===p);
     if(it){const d=byId[it.other];
-      cells+=`<div class="pcell on" data-id="${d.id}" title="${escAttr(d.nombre)}">${p}<span class="d" style="background:${col(d)}"></span></div>`;}
+      cells+=`<div class="pcell on" data-id="${d.id}" title="P${p} · ${escAttr(d.nombre)}">${p}<span class="d" style="background:${col(d)}"></span></div>`;}
     else cells+=`<div class="pcell">${p}</div>`;
   }
-  const list=mine.slice().sort((a,b)=>a.port-b.port).map(it=>{
-    const d=byId[it.other];
-    return d?`<div class="prowC" data-id="${d.id}"><b>P${it.port}</b><span>${escAttr(d.nombre)}</span><i>${escAttr((TYPE[d.tipo]||['',''])[1])}</i></div>`:'';
+  const rows=items.slice().sort((a,b)=>a.port-b.port).map(it=>{
+    const d=byId[it.other]; if(!d)return '';
+    let ops='';
+    for(let q=1;q<=capN;q++) ops+=`<option value="${q}"${q===it.port?' selected':''}>P${q}</option>`;
+    return `<div class="prowC" data-id="${d.id}"><select class="psel" data-ei="${it.idx}" data-side="${it.side}" title="Cambiar el puerto de este cable">${ops}</select><span>${escAttr(d.nombre)}</span><i>${escAttr((TYPE[d.tipo]||['',''])[1])}</i></div>`;
   }).join('');
-  return `<div class="pcap"><span>Puertos · clic para abrir el equipo</span><span>${mine.length}/${N}</span></div>
+  return `<div class="pcap"><span>Puertos · cambia el puerto en la lista</span><span>${items.length}/${N}</span></div>
     <div class="pgrid">${cells}</div>
-    <div class="plist">${list||'<div class="empty" style="padding:5px 0">Sin conexiones</div>'}</div>`;
+    <div class="plist">${rows||'<div class="empty" style="padding:5px 0">Sin conexiones</div>'}</div>`;
+}
+function assignPort(e,side,np){
+  if(!e||!np)return false;
+  var id=(side==='s')?e.s:e.t, dev=byId[id]; if(!dev)return false;
+  var cur=(side==='s')?e.pA:e.pB;
+  if(np===cur)return true;
+  var busy=null;
+  doc.edges.forEach(function(x){ if(x===e)return;
+    if(side==='s'&&x.s===id&&x.pA===np)busy=x;
+    if(side==='t'&&x.t===id&&x.pB===np)busy=x; });
+  if(busy){
+    var otro=byId[busy.s===id?busy.t:busy.s];
+    if(!confirm('El puerto '+np+' de '+dev.nombre+' ya lo ocupa '+(otro?otro.nombre:'otro equipo')+'. ¿Intercambiar los dos?'))return false;
+    if(side==='s')busy.pA=cur; else busy.pB=cur;
+    syncRackPort(busy);
+  }
+  if(side==='s')e.pA=np; else e.pB=np;
+  syncRackPort(e); snap(); save(); render(); showDetail();
+  return true;
 }
 function readHTML(n){
   const nb=[...adj[n.id]].map(x=>byId[x]).sort((a,b)=>a.nombre.localeCompare(b.nombre,'es'));
@@ -2417,6 +2444,13 @@ function exportPDF(){
   setTimeout(function(){ try{win.print();}catch(e){} },700);
 }
 
+document.addEventListener('change',function(ev){
+  var s=ev.target;
+  if(!s||!s.classList||!s.classList.contains('psel'))return;
+  var ei=parseInt(s.dataset.ei,10), side=s.dataset.side, np=parseInt(s.value,10);
+  var e=doc.edges[ei];
+  if(!e||!assignPort(e,side,np)){ showDetail(); }
+});
 document.getElementById('bPath').onclick=function(){
   state.pathMode=!state.pathMode; state.pathA=null; state.path=null;
   setBtn('bPath',state.pathMode);
