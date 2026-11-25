@@ -433,7 +433,8 @@ header{grid-column:1/-1;display:flex;flex-direction:column;gap:0;padding:0;align
         <button class="btn" id="bPng">Imagen PNG</button>
         <button class="btn" id="bPdf">PDF (A4 horizontal)</button>
         <button class="btn on" id="bApp">💾 Guardar copia actualizada (HTML)</button>
-        <button class="btn" id="bCsv">Inventario CSV</button>
+        <button class="btn" id="bNets">🌐 Redes y colores</button>
+      <button class="btn" id="bCsv">Inventario CSV</button>
         <button class="btn" id="bRelayout">Reordenar por rejilla</button>
         <button class="btn danger" id="bReset">Restaurar plantilla</button>
       </div>
@@ -528,6 +529,19 @@ header{grid-column:1/-1;display:flex;flex-direction:column;gap:0;padding:0;align
   <div id="clist" style="max-height:56vh;overflow:auto;margin-top:10px"></div>
   <div class="macts"><button class="btn" id="c_close">Cerrar</button></div>
 </div></div>
+<div id="rnm" class="modal"><div class="mbox" style="width:580px">
+  <h3>Redes y colores</h3>
+  <div class="hintbox">Cada red se reconoce por cómo empieza la IP (por ejemplo <b>192.168.41.</b>). El color se usa en la leyenda, en los chips de filtro y en «Color por: Red».</div>
+  <div style="display:grid;grid-template-columns:1fr 130px 46px 34px;gap:8px;margin-top:10px;font-size:10px;color:#7d93b3;letter-spacing:.06em;text-transform:uppercase"><span>Red</span><span>Empieza por</span><span>Color</span><span></span></div>
+  <div id="rnlist" style="max-height:40vh;overflow:auto;margin-top:4px"></div>
+  <div style="display:flex;gap:6px;margin-top:10px;align-items:center;flex-wrap:wrap">
+    <input id="rnname" placeholder="Nombre (Almacén)" style="flex:1;min-width:120px">
+    <input id="rnpre" placeholder="192.168.50." style="width:120px">
+    <input type="color" id="rncol" value="#f472b6" style="width:44px;height:28px;padding:0">
+    <button class="btn on" id="rnadd">＋ Añadir</button>
+  </div>
+  <div class="macts"><button class="btn" id="rnclose">Cerrar</button></div>
+</div></div>
 <div id="zmodal" class="modal"><div class="mbox">
   <h3>Zonas y secciones</h3>
   <div class="hintbox">Elige qué zona contiene a otra: al arrastrar la zona padre se moverán también las hijas, manteniendo su posición relativa.</div>
@@ -582,11 +596,13 @@ const state={editing:null,q:'',types:new Set(Object.keys(TYPE)),zona:'',red:'',l
 // ---------- modelo ----------
 function computeNets(n){
   const out=new Set();
+  const rs=(typeof doc!=='undefined'&&doc&&Array.isArray(doc.redes)&&doc.redes.length)?doc.redes:(typeof DEFAULT_REDES==='function'?DEFAULT_REDES():[]);
   (n.ip||[]).forEach(ip=>{
-    if(/^192\.168\.41\./.test(ip))out.add('Oficinas');
-    else if(/^192\.168\.4\./.test(ip))out.add('Producción');
-    else if(/^192\.168\.1\./.test(ip))out.add('Servidores');
-    else if(ip)out.add('Otra');});
+    let hit=null;
+    rs.forEach(r=>{ if(r.pre&&String(ip).indexOf(r.pre)===0&&(!hit||r.pre.length>hit.pre.length))hit=r; });
+    if(hit)out.add(hit.n);
+    else if(ip){ const otra=rs.filter(r=>!r.pre)[0]; if(otra)out.add(otra.n); else out.add('Otra'); }
+  });
   return [...out];
 }
 function normalize(n){
@@ -680,7 +696,15 @@ function ensureEdges(){
   doc.edges.forEach(e=>{ if(e.port){(used[e.h]=used[e.h]||new Set()).add(e.port);} });
   doc.edges.forEach(e=>{ if(!e.port){const u=used[e.h]=used[e.h]||new Set();let p=1;while(u.has(p))p++;u.add(p);e.port=p;} });
 }
+function DEFAULT_REDES(){ return [
+  {n:'Oficinas',pre:'192.168.41.',col:'#fbbf24'},
+  {n:'Producci\u00f3n',pre:'192.168.4.',col:'#38bdf8'},
+  {n:'Servidores',pre:'192.168.1.',col:'#a78bfa'},
+  {n:'Otra',pre:'',col:'#94a3b8'}]; }
+function netsList(){ return (doc.redes||DEFAULT_REDES()).map(function(r){return r.n;}); }
+function netColOf(name){ var rs=doc.redes||DEFAULT_REDES(); for(var i=0;i<rs.length;i++){ if(rs[i].n===name)return rs[i].col; } return '#94a3b8'; }
 function rebuild(){
+  if(!Array.isArray(doc.redes)||!doc.redes.length)doc.redes=DEFAULT_REDES();
   if(Array.isArray(doc.zlock))doc.zlock=doc.zlock.filter(function(z){return typeof z==='string'&&z.indexOf('${')<0;});
   nodes=doc.nodes.map(normalize);
   byId={}; nodes.forEach(n=>byId[n.id]=n);
@@ -970,14 +994,14 @@ const C=k=>(doc&&doc.colors&&doc.colors[k])||(TYPE[k]||['#94a3b8'])[0];
 function hashCol(s){let x=0;s=String(s||'');for(let i=0;i<s.length;i++)x=(x*31+s.charCodeAt(i))>>>0;
   return 'hsl('+(x%360)+' 62% 58%)';}
 function colOf(n){
-  if(state.colorBy==='red')return n.nets.length?hashCol(n.nets[0]):'#475569';
+  if(state.colorBy==='red')return n.nets.length?netColOf(n.nets[0]):'#475569';
   if(state.colorBy==='zona')return hashCol(n.zona);
   if(state.colorBy==='vlan'){const m=String(n.vlan||'').match(/\d+/);return m?hashCol('v'+m[0]):'#475569';}
   return C(n.tipo);
 }
 const col=n=>colOf(n);
 const ICONS={patch:'<rect x="2.5" y="6" width="19" height="12" rx="2"/><path d="M6 9v6M9.5 9v6M13 9v6M16.5 9v6M20 9v6"/>',pc:'<rect x="3" y="4" width="18" height="12" rx="1.5"/><path d="M9 20h6M12 16v4"/>',switch:'<rect x="2.5" y="7" width="19" height="10" rx="2"/><path d="M6 12h.01M9.5 12h.01M13 12h.01M16.5 12h.01"/>',router:'<circle cx="12" cy="12" r="8.5"/><path d="M12 7.6v8.8M7.6 12h8.8M9.4 9.4l5.2 5.2M14.6 9.4l-5.2 5.2"/>',firewall:'<path d="M12 3l7.5 3v6.2c0 4.3-3.1 7.6-7.5 9.3-4.4-1.7-7.5-5-7.5-9.3V6z"/>',server:'<rect x="4" y="3.5" width="16" height="7" rx="1.5"/><rect x="4" y="13.5" width="16" height="7" rx="1.5"/><path d="M7.5 7h.01M7.5 17h.01"/>',nas:'<rect x="4" y="3" width="16" height="4.6" rx="1.2"/><rect x="4" y="9.7" width="16" height="4.6" rx="1.2"/><rect x="4" y="16.4" width="16" height="4.6" rx="1.2"/>',wifi:'<path d="M4 9.5a12 12 0 0 1 16 0M7 13a8 8 0 0 1 10 0M9.8 16.4a4 4 0 0 1 4.4 0"/><circle cx="12" cy="19.6" r="1"/>',nvr:'<path d="M3 8.5h11.5a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2H3z"/><path d="M16.5 12l4.5-2.5v7L16.5 14"/><circle cx="7.5" cy="12" r="1.6"/>',otro:'<rect x="4" y="4" width="16" height="16" rx="3"/><path d="M12 9v6M9 12h6"/>',maquina:'<circle cx="12" cy="12" r="3.2"/><path d="M12 3.5v3M12 17.5v3M3.5 12h3M17.5 12h3M6 6l2.1 2.1M15.9 15.9L18 18M18 6l-2.1 2.1M8.1 15.9L6 18"/>',cnc:'<rect x="3" y="4" width="18" height="5" rx="1.5"/><path d="M12 9v6M9.5 20h5M12 15l-2.2 2.2h4.4z"/>',plc:'<rect x="5" y="3" width="14" height="18" rx="2"/><path d="M8.5 7h7M8.5 11h7M8.5 15h4"/>',impresora:'<path d="M7 8V4h10v4"/><rect x="3" y="8" width="18" height="8" rx="2"/><path d="M7 14h10v6H7z"/>',camara:'<path d="M3 8h10l4-2.5v13L13 16H3z"/><circle cx="19" cy="12" r="1.6"/>',ups:'<rect x="6" y="2.5" width="12" height="19" rx="2"/><path d="M11 7l-1.6 4.5h2.6L10.6 17l4-5.4h-2.6L12 7z"/>',vm:'<rect x="2.5" y="4" width="13" height="9.5" rx="1.5"/><path d="M18 8h2.2a1.3 1.3 0 0 1 1.3 1.3V18a1.3 1.3 0 0 1-1.3 1.3H9.6A1.3 1.3 0 0 1 8.3 18v-1.6"/><path d="M6 8.2h6M6 11h4"/>'};
-const netcol=n=>!n.nets.length?'#41547a':n.nets.length>1?'#f472b6':(NETCOL[n.nets[0]]||'#41547a');
+const netcol=n=>!n.nets.length?'#41547a':n.nets.length>1?'#f472b6':(netColOf(n.nets[0])||'#41547a');
 const R=n=>11;
 function wrap2(s,max){
   s=String(s||'');
@@ -1362,7 +1386,7 @@ function readHTML(n){
        const nn=netName(ip);
        const cc=(DUPI[n.id]||[]).filter(x=>x.ip===ip).map(x=>x.other);
        return `<span class="${cc.length?'ipbad':''}">${escAttr(ip)}</span>`+
-         (nn?` <span class="netp" style="color:${NETCOL[nn]||'#94a3b8'}">${nn}</span>`:'')+
+         (nn?` <span class="netp" style="color:${netColOf(nn)}">${nn}</span>`:'')+
          (cc.length?` <span class="dupw">⚠ ya en ${escAttr(cc.join(', '))}</span>`:'');
      }).join('<br>'):'sin IP'}</dd>
      <dt>MAC</dt><dd class="mono">${v(n.mac)}</dd>
@@ -2797,11 +2821,12 @@ function renderCmodal(){
   });
 }
 var NETS=['Oficinas','Producci\u00f3n','Servidores','sin'];
+function netsChips(){ var l=netsList(); if(l.indexOf('sin')<0)l=l.concat(['sin']); return l; }
 function renderNets(){
   var box=document.getElementById('fNets'); if(!box)return;
-  box.innerHTML=NETS.map(function(k){
+  box.innerHTML=netsChips().map(function(k){
     return '<button type="button" class="nc'+(state.nets.has(k)?' on':'')+'" data-k="'+k+'">'+
-      '<i style="background:'+(k==='sin'?'#475569':hashCol(k))+'"></i>'+(k==='sin'?'Sin red':k)+'</button>';
+      '<i style="background:'+(k==='sin'?'#475569':netColOf(k))+'"></i>'+(k==='sin'?'Sin red':k)+'</button>';
   }).join('');
   box.querySelectorAll('.nc').forEach(function(b){
     b.onclick=function(){
@@ -2914,6 +2939,48 @@ document.getElementById('bPath').onclick=function(){
   setBtn('bPath',state.pathMode);
   pathHint(state.pathMode,'\ud83e\udded Ruta: pulsa el equipo de origen');
   render(); showDetail();
+};
+function renderRedes(){
+  var box=document.getElementById('rnlist'); if(!box)return;
+  var rs=doc.redes||DEFAULT_REDES();
+  box.innerHTML=rs.map(function(r,i){
+    return '<div class="zrow" style="grid-template-columns:1fr 130px 46px 34px">'+
+      '<input class="rn-n" data-i="'+i+'" value="'+escAttr(r.n)+'" style="background:#0c1626;border:1px solid #26374f;border-radius:6px;color:#dbe9ff;font-size:12px;padding:5px 7px">'+
+      '<input class="rn-p" data-i="'+i+'" value="'+escAttr(r.pre||'')+'" placeholder="192.168.50." style="background:#0c1626;border:1px solid #26374f;border-radius:6px;color:#dbe9ff;font-size:12px;padding:5px 7px">'+
+      '<input type="color" class="rn-c" data-i="'+i+'" value="'+escAttr(r.col||'#94a3b8')+'" style="width:42px;height:28px;padding:0;border:none;background:none">'+
+      '<button class="x" data-rdel="'+i+'" title="Quitar esta red">✕</button></div>';
+  }).join('')||'<div class="empty">Sin redes</div>';
+  box.querySelectorAll('.rn-n,.rn-p,.rn-c').forEach(function(el){
+    el.onchange=function(){
+      var i=+el.dataset.i; var rs2=doc.redes||DEFAULT_REDES();
+      if(!rs2[i])return;
+      if(el.classList.contains('rn-n'))rs2[i].n=el.value.trim()||rs2[i].n;
+      if(el.classList.contains('rn-p'))rs2[i].pre=el.value.trim();
+      if(el.classList.contains('rn-c'))rs2[i].col=el.value;
+      doc.redes=rs2; save(); rebuild(); rebuildUI(); render(); renderList(); showDetail(); renderRedes();
+    };
+  });
+  box.querySelectorAll('[data-rdel]').forEach(function(b){
+    b.onclick=function(){
+      var i=+b.dataset.rdel; var rs2=doc.redes||DEFAULT_REDES();
+      var usados=nodes.filter(function(n){return (n.nets||[]).indexOf(rs2[i].n)>=0;}).length;
+      if(usados && !confirm('Hay '+usados+' equipos en «'+rs2[i].n+'». Si la quitas pasarán a la red sin prefijo. ¿Continuar?'))return;
+      rs2.splice(i,1); doc.redes=rs2; save(); rebuild(); rebuildUI(); render(); renderList(); renderRedes();
+    };
+  });
+}
+document.getElementById('bNets').onclick=function(){ var m=document.getElementById('moreMenu'); if(m)m.classList.remove('on');
+  renderRedes(); document.getElementById('rnm').classList.add('on'); };
+document.getElementById('rnclose').onclick=function(){ document.getElementById('rnm').classList.remove('on'); };
+document.getElementById('rnadd').onclick=function(){
+  var n=document.getElementById('rnname').value.trim(), p=document.getElementById('rnpre').value.trim(), c=document.getElementById('rncol').value;
+  if(!n){ document.getElementById('rnname').focus(); return; }
+  doc.redes=doc.redes||DEFAULT_REDES();
+  if(doc.redes.some(function(r){return r.n===n;})){ alert('Ya existe una red con ese nombre'); return; }
+  if(p && doc.redes.some(function(r){return r.pre===p;})){ if(!confirm('Ya hay una red con el prefijo '+p+'. Las IPs se asignar\u00e1n a la primera que coincida. \u00bfContinuar?'))return; }
+  doc.redes.push({n:n,pre:p,col:c});
+  document.getElementById('rnname').value=''; document.getElementById('rnpre').value='';
+  save(); rebuild(); rebuildUI(); render(); renderList(); showDetail(); renderRedes();
 };
 document.getElementById('bCheck').onclick=function(){ renderCmodal(); document.getElementById('cmodal').classList.add('on'); };
 document.getElementById('c_close').onclick=function(){ document.getElementById('cmodal').classList.remove('on'); };
