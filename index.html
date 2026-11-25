@@ -385,6 +385,16 @@ header{grid-column:1/-1;display:flex;flex-direction:column;gap:0;padding:0;align
 .cabttl{font-size:12px;font-weight:700;color:#9fc0ea;letter-spacing:.06em;text-transform:uppercase;margin:14px 0 6px}
 .cabrow.sel rect:first-child{stroke:#4f8cff;stroke-width:2}
 .rkord{display:flex;gap:6px;margin-left:8px}
+.nics{display:flex;flex-direction:column;gap:5px;margin:5px 0}
+.nicrow{display:flex;flex-wrap:wrap;gap:4px;align-items:center;background:#0c1626;border:1px solid #24344f;border-radius:6px;padding:5px}
+.nicrow input,.nicrow select{background:#0b1424;border:1px solid #26374f;color:#dbe9ff;border-radius:5px;font:inherit;font-size:10.5px;padding:3px 5px;min-width:0}
+.nicrow .nc-n{width:92px}.nicrow .nc-k{width:70px}.nicrow .nc-m{width:78px}
+.nicrow .nc-v{width:52px}.nicrow .nc-ip{width:100px}.nicrow .nc-mac{width:112px}.nicrow .nc-h{width:96px}
+.nicrow .nc-del{margin-left:auto;background:none;border:none;color:#7d93b3;cursor:pointer;font-size:12px}
+.niclist{display:flex;flex-direction:column;gap:3px}
+.nicl{display:flex;flex-direction:column;background:#0e1b2e;border:1px solid #1e2e48;border-radius:6px;padding:4px 7px}
+.nicl b{font-size:11px;color:#cfe1ff}
+.nicl span{font-size:10px;color:#8ba0bd}
 #dirty:empty{display:none}
 #gPing{pointer-events:none}
 #p_body .prowC b{white-space:nowrap;font-size:10.5px}
@@ -539,6 +549,9 @@ header{grid-column:1/-1;display:flex;flex-direction:column;gap:0;padding:0;align
     <div class="mf"><label>Modelo</label><input id="m_modelo"></div>
     <div class="mf"><label>Ubicación</label><input id="m_ubic"></div>
     <div class="mf wide"><div id="m_extra" class="mfields"></div></div>
+    <div class="mf wide"><label>Adaptadores de red (físicos y virtuales)</label>
+      <div class="nics" id="m_nics"></div>
+      <button type="button" class="btn mini" id="m_nicadd">＋ Añadir adaptador</button></div>
     <div class="mf wide"><label>Notas</label><textarea id="m_notas" rows="2"></textarea></div>
   </div>
   <div class="mact"><button class="btn" id="m_cancel">Cancelar</button>
@@ -1328,6 +1341,15 @@ function readHTML(n){
      <dt>Red</dt><dd>${n.nets.length?n.nets.join(' · '):v(n.red)}</dd>
    </dl>
    ${extraHTML(n)}
+   ${(function(){
+      var L=n.nics||[];
+      if(!L.length)return '';
+      return '<h4 style="font-size:10.5px;letter-spacing:.1em;color:#7d93b3;margin:10px 0 5px">ADAPTADORES ('+L.length+')</h4>'+
+        '<div class="niclist">'+L.map(function(x){
+          var det=[x.k,x.m,(x.vlan?'VLAN '+x.vlan:''),x.ip,x.mac,(x.host?'⇢ '+x.host:'')].filter(Boolean).join(' · ');
+          return '<div class="nicl"><b>'+(x.n||'adaptador')+'</b><span>'+escAttr(det)+'</span></div>';
+        }).join('')+'</div>';
+    })()}
    ${(n.tipo==='switch'||n.tipo==='router'||n.tipo==='firewall')?portGrid(n):''}
    <div class="hist"><h4>ENLACES (${nb.length})</h4>
      ${nb.length?nb.map(x=>`<div class="hitem" data-id="${x.id}" style="display:flex;justify-content:space-between;gap:8px">
@@ -1645,6 +1667,38 @@ function renderMExtra(){
   bindLists('m',t);
   bindPorts('m');
 }
+
+function nicsHTML(list){
+  list=list||[];
+  if(!list.length)list=[{k:'virtual',m:'bridge'}];
+  return list.map(function(v){
+    v=v||{};
+    var ks=['virtual','física'];
+    var ms=['bridge','host-only','NAT','trunk','acceso'];
+    return '<div class="nicrow">'+
+      '<input class="nc-n" placeholder="vNIC1 / eth0" value="'+escAttr(v.n||'')+'">'+
+      '<select class="nc-k">'+ks.map(function(k){return '<option'+(String(v.k||'virtual')===k?' selected':'')+'>'+k+'</option>';}).join('')+'</select>'+
+      '<select class="nc-m">'+ms.map(function(k){return '<option'+(String(v.m||'bridge')===k?' selected':'')+'>'+k+'</option>';}).join('')+'</select>'+
+      '<input class="nc-v" placeholder="VLAN" value="'+escAttr(v.vlan||'')+'">'+
+      '<input class="nc-ip" placeholder="IP" value="'+escAttr(v.ip||'')+'">'+
+      '<input class="nc-mac" placeholder="MAC" value="'+escAttr(v.mac||'')+'">'+
+      '<input class="nc-h" placeholder="en host/switch" value="'+escAttr(v.host||'')+'">'+
+      '<button type="button" class="x nc-del" title="Quitar">\u2715</button>'+
+    '</div>';
+  }).join('');
+}
+function nicsRead(boxId){
+  var box=document.getElementById(boxId); if(!box)return [];
+  return [].map.call(box.querySelectorAll('.nicrow'),function(r){
+    function v(c){var e=r.querySelector(c);return e?String(e.value||'').trim():'';}
+    var o={n:v('.nc-n'),k:v('.nc-k'),m:v('.nc-m'),vlan:v('.nc-v'),ip:v('.nc-ip'),mac:v('.nc-mac'),host:v('.nc-h')};
+    return (o.n||o.ip||o.mac||o.host)?o:null;
+  }).filter(Boolean);
+}
+function nicsFill(boxId,list){
+  var box=document.getElementById(boxId); if(!box)return;
+  box.innerHTML=nicsHTML(list&&list.length?list:[{k:'virtual',m:'bridge'}]);
+}
 function formHTML(n){
   const links=edges.filter(e=>e.s===n.id||e.t===n.id).map(e=>{
     const o=byId[e.s===n.id?e.t:e.s]; return {o,s:e.s,t:e.t};});
@@ -1669,6 +1723,11 @@ function formHTML(n){
       <div class="fld"><label>Ubicación</label><input id="e_ubic" value="${(n.ubic||'').replace(/"/g,'&quot;')}"></div>
     </div>
     ${fieldsHTML('e',n.tipo,n)}
+    <div class="fld"><label>Adaptadores de red (físicos y virtuales)</label>
+      <div class="nics" id="e_nics">${nicsHTML(n.nics)}</div>
+      <button type="button" class="btn mini" id="e_nicadd">＋ Añadir adaptador</button>
+      <div class="iphelp">En una <b>máquina virtual</b>: adaptador virtual (bridge, host-only, NAT o VLAN) y en qué host está. En el <b>servidor anfitrión</b>: sus adaptadores físicos y qué VM los usan.</div>
+    </div>
     <div class="fld"><label>Notas</label><textarea id="e_notas" rows="2">${n.notas||''}</textarea></div>
     <div class="acts"><button class="btn on" id="e_save">Guardar cambios</button>
       <button class="btn danger" id="e_del">Eliminar</button></div>
@@ -1717,6 +1776,7 @@ function showDetail(){
           <button class="btn" id="e_bend">Quitar curva</button>
           <button class="btn" id="e_clean" title="Quita los puntos que ya no doblan el cable">Limpiar puntos</button>
           <button class="btn" id="e_hide">${ed0.hide?'Mostrar':'Ocultar'}</button>
+          <button class="btn danger" id="e_dellink">\ud83d\uddd1 Eliminar</button>
         </div>
         <div class="frow" style="display:flex;gap:8px;margin-top:6px">
           <button class="btn" id="e_ntxt">\u{1F4DD} Caja de texto</button>
@@ -1754,6 +1814,11 @@ function showDetail(){
       if(eq){eq.oninput=ev=>{ed0.etq=ev.target.value;save();render();};}
       const hb=document.getElementById('e_hide'); if(hb)hb.onclick=()=>{ed0.hide=!ed0.hide;save();render();showDetail();};
       const bb=document.getElementById('e_bend'); if(bb)bb.onclick=()=>{ed0.pts=[];delete ed0.bx;delete ed0.by;save();render();showDetail();};
+      const dl=document.getElementById('e_dellink'); if(dl)dl.onclick=()=>{
+        if(!confirm('\u00bfEliminar el enlace entre '+A.nombre+' y '+B.nombre+'?'))return;
+        snap(); doc.edges=doc.edges.filter(x=>x!==ed0); state.esel=null;
+        save(); rebuild(); render(); renderList(); showDetail();
+      };
       const cb2=document.getElementById('e_clean'); if(cb2)cb2.onclick=()=>{var q=pruneEdgePoints(ed0);snap();save();render();showDetail();if(!q)alert('No hab\u00eda puntos redundantes.');};
       const nb=document.getElementById('e_ntxt'); if(nb)nb.onclick=()=>openEdgeNote(ed0);
       const nr=document.getElementById('e_ntrm'); if(nr)nr.onclick=()=>{delete ed0.nt;save();render();showDetail();};
@@ -1848,6 +1913,7 @@ function saveEdit(id){
     readFields('e',tipo));
   const ic=document.getElementById('e_ico'); if(ic){ if(ic.value)n.ico=ic.value; else delete n.ico; }
   const pr=readPorts('e'); if(pr){n.ports=pr;n.puertos=String(pr.length);}
+  const nics=nicsRead('e_nics'); if(nics.length)n.nics=nics; else delete n.nics;
   save(); rebuild(); rebuildUI();
   if(nodes.some(x=>!ZBOX.find(b=>b.z===x.zona)))layout();
   render(); renderList(); showDetail();
@@ -1858,6 +1924,7 @@ function openModal(zona){
   var _sel=document.getElementById('m_zona');
   var _zz=zonas.slice().sort(function(a,b){return a.localeCompare(b,'es');});
   _sel.innerHTML=_zz.map(function(z){return '<option value="'+escAttr(z)+'">'+escAttr(z)+'</option>';}).join('')+'<option value="Sin zona">\u2014 Sin zona \u2014</option><option value="__nueva__">\u002b Crear zona nueva\u2026</option>';
+  nicsFill('m_nics',[{k:'virtual',m:'bridge'}]);
   var _want=zona||'';
   if(_want&&_zz.indexOf(_want)>=0){ _sel.value=_want; document.getElementById('m_znueva').value=''; }
   else if(_want&&_want!=='Sin zona'){ _sel.value='__nueva__'; document.getElementById('m_znueva').value=_want; }
@@ -1887,6 +1954,7 @@ function createFromModal(){
     red:'',detalle:'', nx:box?box.x+box.w/2:0, ny:box?box.y+box.h/2:0};
   Object.assign(n,readFields('m',tipo));
   const prm=readPorts('m'); if(prm){n.ports=prm;n.puertos=String(prm.length);}
+  const nicsm=nicsRead('m_nics'); if(nicsm.length)n.nics=nicsm;
   snap(); doc.nodes.push(n); save(); rebuild();
   if(!ZBOX.find(b=>b.z===zona))layout();
   rebuildUI(); state.sel=n.id; state.esel=null;
@@ -2151,6 +2219,15 @@ document.addEventListener('keydown',e=>{
         }
         return; }
     }
+    if(state.esel){
+      const ed=doc.edges.find(x=>(x.s===state.esel.s&&x.t===state.esel.t)||(x.s===state.esel.t&&x.t===state.esel.s));
+      if(ed){ e.preventDefault();
+        if(confirm('\u00bfEliminar el enlace entre '+(byId[ed.s]||{}).nombre+' y '+(byId[ed.t]||{}).nombre+'?')){
+          snap(); doc.edges=doc.edges.filter(x=>x!==ed);
+          state.esel=null; save(); rebuild(); render(); renderList(); showDetail();
+        }
+        return; }
+    }
     if(state.sel&&byId[state.sel]){ e.preventDefault(); delNode(state.sel); return; }
   }
 });
@@ -2199,6 +2276,18 @@ document.getElementById('bLabels').onclick=e=>{state.labels=!state.labels;e.targ
 document.getElementById('bIp').onclick=e=>{state.showIp=!state.showIp;e.target.classList.toggle('on',state.showIp);render();};
 document.getElementById('bEdges').onclick=e=>{state.edges=!state.edges;e.target.classList.toggle('on',state.edges);render();};
 document.getElementById('bHull').onclick=e=>{state.hulls=!state.hulls;e.target.classList.toggle('on',state.hulls);render();};
+document.addEventListener('click',function(ev){
+  var t=ev.target;
+  if(t&&(t.id==='e_nicadd'||t.id==='m_nicadd')){
+    var box=document.getElementById(t.id==='e_nicadd'?'e_nics':'m_nics');
+    if(box){ var d=document.createElement('div'); d.innerHTML=nicsHTML([{k:'virtual',m:'bridge'}]); box.appendChild(d.firstChild); }
+    return;
+  }
+  if(t&&t.classList&&t.classList.contains('nc-del')){
+    var row=t.closest('.nicrow'); var bx=row&&row.parentNode;
+    if(row&&bx){ row.remove(); if(!bx.querySelector('.nicrow')) bx.innerHTML=nicsHTML([{k:'virtual',m:'bridge'}]); }
+  }
+});
 document.getElementById('m_ok').onclick=createFromModal;
 document.getElementById('m_cancel').onclick=closeModal;
 document.getElementById('modal').onclick=e=>{if(e.target.id==='modal')closeModal();};
