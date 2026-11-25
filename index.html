@@ -1140,7 +1140,7 @@ function render(){
 }
 function renderList(){
   const l=document.getElementById('list'),items=nodes.filter(vis);
-  document.getElementById('count').textContent=items.length;
+  const _c=document.getElementById('count'); if(_c)_c.textContent=items.length;
   if(!items.length){l.innerHTML='<div class="empty">Sin resultados</div>';return;}
   items.sort((a,b)=>a.nombre.localeCompare(b.nombre,'es'));
   l.innerHTML=items.map(n=>`<div class="item${state.sel===n.id?' on':''}" data-id="${n.id}">
@@ -1153,9 +1153,9 @@ function renderList(){
 function select(id,center){
   if(state.editing&&state.editing!==id)state.editing=null;
   if(state.pathMode){
-    if(!state.pathA){state.pathA=id;state.sel=id;render();showDetail();return;}
+    if(!state.pathA){state.pathA=id;state.sel=id;pathHint(true,'Origen: '+(byId[id]?byId[id].nombre:'')+' \u2014 pulsa el destino');render();showDetail();return;}
     state.path=bfsPath(state.pathA,id);
-    state.pathA=null; state.pathMode=false; setBtn('bPath',false);
+    state.pathA=null; state.pathMode=false; setBtn('bPath',false); pathHint(false);
     state.sel=null; render(); showDetail(); return;
   }
   if(state.edit&&state.linkMode){
@@ -1165,6 +1165,18 @@ function select(id,center){
   }
   state.sel=state.sel===id?null:id; state.esel=null; render(); renderList(); showDetail();
   if(state.sel&&center)centerOn(byId[id]);
+}
+function pathHint(on,txt){
+  var el=document.getElementById('pathhint');
+  if(!el){
+    el=document.createElement('div'); el.id='pathhint';
+    el.style.cssText='position:fixed;left:50%;transform:translateX(-50%);bottom:22px;z-index:80;'+
+      'background:#132a4a;border:1px solid #2f5d97;color:#dcebff;padding:8px 16px;border-radius:999px;'+
+      'font-size:12.5px;box-shadow:0 10px 28px rgba(0,0,0,.5);display:none;pointer-events:none';
+    document.body.appendChild(el);
+  }
+  el.textContent=txt||'';
+  el.style.display=on?'':'none';
 }
 function centerOn(n){const W=svg.clientWidth||1200,H=svg.clientHeight||800;
   t.x=W/2-n.x*t.k; t.y=H/2-n.y*t.k; applyT();}
@@ -1572,6 +1584,16 @@ function formHTML(n){
 }
 function showDetail(){
   const d=document.getElementById('detail'),app=document.querySelector('.app');
+  if(state.pathMode){
+    app.classList.add('sel');
+    var org=state.pathA?byId[state.pathA]:null;
+    d.innerHTML='<div class="dtitle">\ud83e\udded Ruta</div>'+
+      '<div class="dtype">'+(org?('Origen: <b>'+escAttr(org.nombre)+'</b><br>Ahora pulsa el equipo de destino.'):'Pulsa el equipo de <b>origen</b> en el mapa y despu\u00e9s el de destino.')+'</div>'+
+      '<div class="frow" style="margin-top:8px"><button class="btn" id="rt_cancel">Cancelar ruta</button></div>';
+    var cb=document.getElementById('rt_cancel');
+    if(cb)cb.onclick=function(){ state.pathMode=false; state.pathA=null; state.path=null; setBtn('bPath',false); pathHint(false); render(); showDetail(); };
+    return;
+  }
   if(state.esel){
     const ed0=doc.edges.find(x=>(x.s===state.esel.s&&x.t===state.esel.t)||(x.s===state.esel.t&&x.t===state.esel.s));
     if(!ed0){state.esel=null;}
@@ -1942,6 +1964,14 @@ window.addEventListener('mousemove',e=>{
     tip.style.top=(e.clientY+16)+'px';}
   else tip.style.opacity=0;
 });
+function anyDrag(){
+  try{ return !!(drag||ndrag||zdrag||zres||nres||bh||dgroup||adrag||pan); }catch(e){ return false; }
+}
+function forceRelease(){ if(anyDrag()){ try{ window.dispatchEvent(new MouseEvent('mouseup',{bubbles:true})); }catch(e){} } }
+document.addEventListener('mouseleave',forceRelease);
+window.addEventListener('blur',forceRelease);
+document.addEventListener('visibilitychange',function(){ if(document.hidden)forceRelease(); });
+window.addEventListener('pointercancel',forceRelease);
 window.addEventListener('mouseup',()=>{
   if(adrag){ if(!adrag.move)snapArrowEnd(adrag.a,adrag.end);
     snap(); save(); adrag=null; svg.classList.remove('pan'); suppressClick=true; render(); return; }
@@ -2388,7 +2418,9 @@ function exportPDF(){
 
 document.getElementById('bPath').onclick=function(){
   state.pathMode=!state.pathMode; state.pathA=null; state.path=null;
-  setBtn('bPath',state.pathMode); render(); showDetail();
+  setBtn('bPath',state.pathMode);
+  pathHint(state.pathMode,'\ud83e\udded Ruta: pulsa el equipo de origen');
+  render(); showDetail();
 };
 document.getElementById('bCheck').onclick=function(){ renderCmodal(); document.getElementById('cmodal').classList.add('on'); };
 document.getElementById('c_close').onclick=function(){ document.getElementById('cmodal').classList.remove('on'); };
@@ -2461,7 +2493,6 @@ function notesHTML(){
     return '<g class="'+cls+'" data-nid="'+nn.id+'" transform="translate('+nx+','+ny+')">'+
       '<rect class="ntbg" width="'+w+'" height="'+hh+'" rx="8"/>'+
       '<text class="ntt" x="10" y="'+(sz+3)+'" fill="'+(nn.col||'#dbe9ff')+'" style="font-size:'+sz+'px">'+tsp+'</text>'+
-      '<rect class="nzh" x="'+(w-12)+'" y="'+(hh-12)+'" width="10" height="10" rx="2"/>'+
       '<rect class="nzh2" x="'+(w-40)+'" y="'+(hh-12)+'" width="26" height="10" rx="2"/></g>';
   }).join('');
 }
