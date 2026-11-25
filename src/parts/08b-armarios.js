@@ -139,7 +139,7 @@ function renderArmarios(){
       s+='</g>';
     } else if(it.k==='pp'){
       var filas=Math.max(1,Math.min(3,it.u||1));
-      var per=24, total=per*filas;
+      var per=Math.max(6,Math.min(48,it.ppr||24)), total=per*filas;
       var WPP=W+120;                       // el panel aprovecha el hueco de cables
       s+='<g class="armitem pp" data-idx="'+idx+'" data-pp="1" data-y="'+y+'">';
       // chapa frontal con dos tonos
@@ -151,10 +151,11 @@ function renderArmarios(){
       // etiqueta y controles
       s+='<text x="'+(X0+16)+'" y="'+(y+(filas>1?13:hh/2+3.5))+'" class="cabn">'+escAttr(it.n||('Patch '+total+'p'))+'</text>';
       s+='<text class="armu" data-hu="'+idx+'" x="'+(X0+16)+'" y="'+(y+(filas>1?25:hh/2+3.5))+'" title="Altura de este patch ('+filas+'U). Clic para cambiarla.">'+filas+'U</text>';
-      s+='<text class="cabxx" data-del="'+idx+'" x="'+(X0+WPP-14)+'" y="'+(y+12)+'" text-anchor="end" title="Quitar">✕</text>';
-      s+='<text class="cabbulk" data-bulk="'+idx+'" x="'+(X0+WPP-32)+'" y="'+(y+12)+'" text-anchor="end" title="Enlazar los puertos con el mismo número de un switch">⚡</text>';
+      s+='<text class="armu" data-ppn="'+idx+'" x="'+(X0+40)+'" y="'+(y+(filas>1?25:hh/2+3.5))+'" title="Puertos por fila. Clic para cambiarlos.">'+per+'P/fila</text>';
+      s+='<text class="cabbulk" data-bulk="'+idx+'" x="'+(X0+WPP-74)+'" y="'+(y+13)+'" title="Enlazar los puertos con el mismo número de un switch">⚡</text>';
+      s+='<text class="cabxx" data-del="'+idx+'" x="'+(X0+WPP-10)+'" y="'+(y+13)+'" text-anchor="end" title="Quitar">✕</text>';
       // 24 conectores RJ45 por U, en dos bloques de 12
-      var px0=X0+72, pfin=X0+WPP-14, huecoG=8;
+      var px0=X0+72, pfin=X0+WPP-84, huecoG=8;
       var pw=(pfin-px0-huecoG)/per;
       var ah=Math.max(8,(hh-6)/filas-2);
       for(var r2=0;r2<filas;r2++){
@@ -183,18 +184,23 @@ function renderArmarios(){
       s+='<g class="armitem" data-idx="'+idx+'" data-id="'+n.id+'" data-y="'+y+'">';
       s+='<rect x="'+X0+'" y="'+y+'" width="'+W+'" height="'+hh+'" rx="4" fill="#132239" stroke="#2b4368"/>';
       s+='<rect x="'+X0+'" y="'+y+'" width="5" height="'+hh+'" rx="2" fill="'+c+'"/>';
-      var nm=String(n.nombre||''); if(nm.length>26)nm=nm.slice(0,25)+'…';
-      s+='<text x="'+(X0+14)+'" y="'+(y+13)+'" class="cabn">'+escAttr(nm)+'</text>';
-      s+='<text x="'+(X0+190)+'" y="'+(y+13)+'" class="cabs">'+escAttr((TYPE[n.tipo]||['',''])[1])+'</text>';
-      s+='<text class="armu" data-hu="'+idx+'" x="'+(X0+W-44)+'" y="'+(y+13)+'" title="Altura en U. Clic para cambiarla.">'+h+'U</text>';
-      s+='<text class="cabxx" data-del="'+idx+'" x="'+(X0+W-8)+'" y="'+(y+13)+'" text-anchor="end">✕</text>';
-      if(hh>24) s+='<text x="'+(X0+14)+'" y="'+(y+30)+'" class="cabi">'+escAttr(n.ip[0]||'sin IP')+' · '+h+'U</text>';
-      // tira de puertos
-      var cap=Math.min(28,capFor(n.id)), step=Math.min(9,(W-250)/Math.max(1,cap));
+      var nm=String(n.nombre||'');
+      var maxc=hh>26?26:22; if(nm.length>maxc)nm=nm.slice(0,maxc-1)+'…';
+      var baseY=y+(hh>26?13:Math.min(hh-4,Math.round(hh/2+3.5)));
+      // nombre a la izquierda, con hueco reservado
+      s+='<text x="'+(X0+12)+'" y="'+baseY+'" class="cabn">'+escAttr(nm)+'<title>'+escAttr(n.nombre)+' · '+escAttr((TYPE[n.tipo]||['',''])[1])+'</title></text>';
+      // tira de puertos en su banda
+      var cap=Math.min(32,capFor(n.id));
+      var px1=X0+178, px2=X0+W-64, step=Math.min(9,(px2-px1)/Math.max(1,cap));
+      s+='<rect x="'+(px1-3)+'" y="'+(y+hh-11)+'" width="'+((cap*step)+5).toFixed(1)+'" height="9" rx="2" fill="#0b1524" opacity=".65" pointer-events="none"/>';
       for(var q=1;q<=cap;q++){
         var used=doc.edges.some(function(e){return (e.s===n.id&&e.pA===q)||(e.t===n.id&&e.pB===q);});
-        s+='<rect x="'+(X0+240+(q-1)*step).toFixed(1)+'" y="'+(y+hh-9)+'" width="'+Math.max(2,step-1.5).toFixed(1)+'" height="5" rx="1" fill="'+(used?'#4f8cff':'#22344f')+'"/>';
+        s+='<rect class="devport'+(used?' on':'')+'" data-dp="'+n.id+'" data-p="'+q+'" x="'+(px1+(q-1)*step).toFixed(1)+'" y="'+(y+hh-9.5)+'" width="'+Math.max(2,step-1.6).toFixed(1)+'" height="6" rx="1"'+
+           '><title>P'+q+(used?' (ocupado)':' (libre)')+'</title></rect>';
       }
+      // altura y quitar, en el margen derecho
+      s+='<text class="armu" data-hu="'+idx+'" x="'+(X0+W-56)+'" y="'+baseY+'" title="Altura en U. Clic para cambiarla.">'+h+'U</text>';
+      s+='<text class="cabxx" data-del="'+idx+'" x="'+(X0+W-12)+'" y="'+baseY+'" text-anchor="end" title="Quitar">✕</text>';
       s+='</g>';
     }
   });
@@ -277,14 +283,26 @@ function bindArmarios(){
     el.onclick=function(ev){
       ev.stopPropagation();
       var i2=+el.getAttribute('data-hu'), it=r.items[i2]; if(!it)return;
-      var maxU=it.k==='pp'?3:4;
-      var nu=(it.u||1)+1; if(nu>maxU)nu=1;
+      var maxU=it.k==='pp'?6:8;
+      var def=it.u||1;
+      var v=prompt('Altura en U (1-'+maxU+'):', def);
+      if(v===null)return;
+      var nu=parseInt(v,10); if(!nu||nu<1)nu=1; if(nu>maxU)nu=maxU;
       var viejo=it.u||1; it.u=nu;
-      // comprobar que no choca con lo de arriba
       var fuera=colision(r,it);
       if(fuera){ it.u=viejo; alert('No cabe: hay algo justo encima. Mueve ese elemento primero.'); return; }
       if(it.k==='dev' && byId[it.id]) byId[it.id].u=nu;
       save(); renderArmarios();
+    };
+  });
+  RACK.querySelectorAll('[data-ppn]').forEach(function(el){
+    el.onclick=function(ev){
+      ev.stopPropagation();
+      var i2=+el.getAttribute('data-ppn'), it=r.items[i2]; if(!it)return;
+      var v=prompt('Puertos por fila del patch panel (6-48):', it.ppr||24);
+      if(v===null)return;
+      var n2=parseInt(v,10); if(!n2||n2<6)n2=6; if(n2>48)n2=48;
+      it.ppr=n2; save(); renderArmarios();
     };
   });
   var acSel=document.getElementById('armacc');
@@ -331,6 +349,7 @@ function bindArmarios(){
     g.addEventListener('mousedown',function(ev){
       if(ev.target.closest('[data-del]'))return;
       if(ev.target.closest('.armport'))return;
+      if(ev.target.closest('.devport'))return;
       if(ev.target.hasAttribute('data-hu'))return;
       if(ev.target.hasAttribute('data-bulk'))return;
       ev.preventDefault();
@@ -362,29 +381,7 @@ function bindArmarios(){
     });
   });
 
-  // puerto del patch panel: clic para enlazar con el switch
-  Array.prototype.forEach.call(document.querySelectorAll('.armport'),function(rc){
-    rc.addEventListener('click',function(ev){
-      ev.stopPropagation();
-      var i=+rc.getAttribute('data-pp'), p=+rc.getAttribute('data-p');
-      var it=r.items[i]; if(!it)return;
-      it.links=it.links||{};
-      var cur=it.links[p];
-      if(cur){
-        if(confirm('Quitar el enlace P'+p+' → '+cur.dev+' P'+cur.port+'?')){ delete it.links[p]; save(); renderArmarios(); }
-        return;
-      }
-      var sws=nodes.filter(function(n){return n.tipo==='switch'||n.tipo==='router';});
-      if(!sws.length){ alert('No hay switches en el mapa.'); return; }
-      var nombres=sws.map(function(s,i){return (i+1)+') '+s.nombre;}).join('\n');
-      var resp=prompt('¿A qué switch enlazas el puerto P'+p+'?\n\n'+nombres+'\n\nEscribe el número (1..'+sws.length+'). Si dejas el mismo número de puerto, pulsa Aceptar sin cambiar nada.', '1');
-      if(resp===null)return;
-      var idx=parseInt(resp)-1;
-      var sw=sws[idx]||sws[0];
-      it.links[p]={dev:sw.nombre,port:p,nid:sw.id};
-      save(); renderArmarios();
-    });
-  });
+  // los clics en puertos se gestionan en 08c-conexiones.js (ventana de enlace)
 }
 
 // rellena de una vez los 24 puertos de un patch panel con el mismo número de puerto del switch
@@ -399,6 +396,6 @@ function enlazarPatchCompleto(itIdx){
   var sw=sws[parseInt(resp)-1]||sws[0];
   it.links=it.links||{};
   var cap=parseInt(sw.puertos)||24;
-  for(var p=1;p<=Math.min(it.ports||24,cap);p++) it.links[p]={dev:sw.nombre,port:p,nid:sw.id};
+  for(var p=1;p<=Math.min((it.ppr||24)*Math.max(1,it.u||1),cap);p++) it.links[p]={dev:sw.nombre,port:p,nid:sw.id};
   save(); renderArmarios();
 }
