@@ -138,54 +138,50 @@ function renderArmarios(){
       s+='<text class="cabxx" data-del="'+idx+'" x="'+(X0+W-8)+'" y="'+(y+13)+'" text-anchor="end">✕</text>';
       s+='</g>';
     } else if(it.k==='pp'){
-      var filas=Math.max(1,Math.min(3,it.u||1));
-      var per=Math.max(6,Math.min(48,it.ppr||24)), total=per*filas;
+      var per=Math.max(6,Math.min(48,it.ppr||24));
+      var total=Math.max(per,Math.min(per*8,it.pt||(per*(it.u||1))));
+      var filas=Math.max(1,Math.ceil(total/per));
+      it.u=filas;
       var WPP=W;
       s+='<g class="armitem pp" data-idx="'+idx+'" data-pp="1" data-y="'+y+'">';
-      // chapa frontal con dos tonos
+      // chapa frontal
       s+='<rect x="'+X0+'" y="'+y+'" width="'+WPP+'" height="'+hh+'" rx="3" fill="#1b2a42" stroke="#5a7699" stroke-width="1.2"/>';
       s+='<rect x="'+(X0+3)+'" y="'+(y+2)+'" width="'+(WPP-6)+'" height="'+(hh-4)+'" rx="2" fill="#0e1a2b" opacity=".5"/>';
-      // orejas de montaje 19" con tornillos
+      // orejas y tornillos
       s+='<rect x="'+(X0-6)+'" y="'+(y+hh/2-7)+'" width="8" height="14" rx="1.5" fill="#243449" stroke="#5a7699" stroke-width=".8"/>';
       s+='<rect x="'+(X0+WPP-2)+'" y="'+(y+hh/2-7)+'" width="8" height="14" rx="1.5" fill="#243449" stroke="#5a7699" stroke-width=".8"/>';
       s+='<circle cx="'+(X0-2)+'" cy="'+(y+hh/2)+'" r="1.8" fill="#93a9c6"/>';
       s+='<circle cx="'+(X0+WPP+2)+'" cy="'+(y+hh/2)+'" r="1.8" fill="#93a9c6"/>';
-      // etiqueta y controles
+      // rotulos: nombre + U + puertos (todo clicable)
       var pn=String(it.n||('Patch '+total+'p')); if(pn.length>22)pn=pn.slice(0,21)+'…';
-      s+='<text x="'+(X0+14)+'" y="'+(y+13)+'" class="cabn2">'+escAttr(pn)+'<title>'+escAttr(it.n||'')+'</title></text>';
-      s+='<text class="armu" data-hu="'+idx+'" x="'+(X0+14)+'" y="'+(y+26)+'" title="Altura que ocupa. Clic para cambiarla.">'+filas+'U</text>';
-      s+='<text class="armu" data-ppn="'+idx+'" x="'+(X0+38)+'" y="'+(y+26)+'" title="Puertos por fila. Clic para cambiarlos.">'+per+' por fila · '+total+'p</text>';
-      s+='<text class="cabbulk" data-bulk="'+idx+'" x="'+(X0+WPP-74)+'" y="'+(filas>1?26:hh/2+4)+'" title="Enlazar los puertos con el mismo número de un switch">⚡</text>';
-      s+='<text class="cabxx" data-del="'+idx+'" x="'+(X0+WPP-10)+'" y="'+(filas>1?26:hh/2+4)+'" text-anchor="end" title="Quitar">✕</text>';
-      // conectores RJ45 en dos bloques, con tira de numeracion como los paneles reales
-      var px0=X0+140, pfin=X0+WPP-88, huecoG=10;
+      s+='<text class="cabn2 armcfg" data-cfg="'+idx+'" x="'+(X0+14)+'" y="'+(y+13)+'" title="Configurar este patch panel">'+escAttr(pn)+'</text>';
+      s+='<text class="armu armcfg" data-cfg="'+idx+'" x="'+(X0+14)+'" y="'+(y+26)+'" title="Configurar este patch panel">'+filas+'U · '+per+' por fila · '+total+'</text>';
+      // controles en el margen derecho, dentro de la chapa
+      var cy=y+Math.min(hh-10,filas>1?26:hh/2+4);
+      s+='<text class="cabbulk" data-bulk="'+idx+'" x="'+(X0+WPP-72)+'" y="'+cy+'" title="Enlazar los puertos con el mismo número de un switch">⚡</text>';
+      s+='<text class="cabxx" data-del="'+idx+'" x="'+(X0+WPP-12)+'" y="'+cy+'" text-anchor="end" title="Quitar">✕</text>';
+      // puertos
+      var px0=X0+140, pfin=X0+WPP-86, huecoG=10;
       var pw=(pfin-px0-huecoG)/per;
-      var rowH=(hh-4)/filas;                 // alto de cada fila
-      var stripH=8;                          // tira blanca de numeros
+      var rowH=(hh-4)/filas, stripH=filas>1?8:7;
       var sockH=Math.max(7,rowH-stripH-2);
-      for(var r2=0;r2<filas;r2++){
+      for(var p=1;p<=total;p++){
+        var r2=Math.floor((p-1)/per), c=(p-1)%per;
         var ry=y+2+r2*rowH;
-        // tira de rotulacion
-        s+='<rect x="'+px0+'" y="'+(ry+sockH+1).toFixed(1)+'" width="'+(pfin-px0)+'" height="'+stripH+'" rx="1" fill="#c9d4e2" opacity=".92"/>';
-        for(var c=0;c<per;c++){
-          var p=r2*per+c+1;
-          var lk=(it.links&&it.links[p])||null;
-          var bx2=px0+c*pw+(c>=Math.ceil(per/2)?huecoG:0);
-          var w2=Math.max(4,pw-2.6);
-          // cuerpo del keystone
-          s+='<rect class="armport'+(lk?' on':'')+'" data-pp="'+idx+'" data-p="'+p+'" x="'+(bx2+1.2).toFixed(1)+'" y="'+ry.toFixed(1)+'" width="'+w2.toFixed(1)+'" height="'+sockH.toFixed(1)+'" rx="1.4"'+
-             '><title>Puerto '+p+(lk?(' → '+lk.dev+' P'+lk.port):' (libre)')+'</title></rect>';
-          // boca hundida
-          s+='<rect x="'+(bx2+2.6).toFixed(1)+'" y="'+(ry+1.8).toFixed(1)+'" width="'+Math.max(2,w2-3).toFixed(1)+'" height="'+Math.max(2,sockH-4.6).toFixed(1)+'" rx="0.7" fill="#04101c" stroke="#2b405c" stroke-width=".6" pointer-events="none"/>';
-          // contactos dorados
-          if(sockH>10){
-            s+='<g pointer-events="none" opacity=".55"><rect x="'+(bx2+3.6).toFixed(1)+'" y="'+(ry+3).toFixed(1)+'" width="'+(w2-6).toFixed(1)+'" height="1" fill="#d9b45a"/><rect x="'+(bx2+3.6).toFixed(1)+'" y="'+(ry+5).toFixed(1)+'" width="'+(w2-6).toFixed(1)+'" height="1" fill="#d9b45a"/></g>';
-          }
-          // pestaña inferior
-          s+='<rect x="'+(bx2+w2/2-1.6).toFixed(1)+'" y="'+(ry+sockH-4).toFixed(1)+'" width="2.4" height="3" rx="0.6" fill="#93a9c6" opacity=".9" pointer-events="none"/>';
-          // numero en la tira
-          s+='<text x="'+(bx2+pw/2-1.2).toFixed(1)+'" y="'+(ry+sockH+stripH-1.4).toFixed(1)+'" class="cabpn2" text-anchor="middle">'+p+'</text>';
+        if(c===0){
+          s+='<rect x="'+px0+'" y="'+(ry+sockH+1).toFixed(1)+'" width="'+(pfin-px0)+'" height="'+stripH+'" rx="1" fill="#c9d4e2" opacity=".92"/>';
         }
+        var lk=(it.links&&it.links[p])||null;
+        var bx2=px0+c*pw+(c>=Math.ceil(per/2)?huecoG:0);
+        var w2=Math.max(4,pw-2.6);
+        s+='<rect class="armport'+(lk?' on':'')+'" data-pp="'+idx+'" data-p="'+p+'" x="'+(bx2+1.2).toFixed(1)+'" y="'+ry.toFixed(1)+'" width="'+w2.toFixed(1)+'" height="'+sockH.toFixed(1)+'" rx="1.4"'+
+           '><title>Puerto '+p+(lk?(' → '+lk.dev+' P'+lk.port):' (libre)')+'</title></rect>';
+        s+='<rect x="'+(bx2+2.6).toFixed(1)+'" y="'+(ry+1.8).toFixed(1)+'" width="'+Math.max(2,w2-3).toFixed(1)+'" height="'+Math.max(2,sockH-4.6).toFixed(1)+'" rx="0.7" fill="#04101c" stroke="#2b405c" stroke-width=".6" pointer-events="none"/>';
+        if(sockH>10){
+          s+='<g pointer-events="none" opacity=".55"><rect x="'+(bx2+3.6).toFixed(1)+'" y="'+(ry+3).toFixed(1)+'" width="'+(w2-6).toFixed(1)+'" height="1" fill="#d9b45a"/><rect x="'+(bx2+3.6).toFixed(1)+'" y="'+(ry+5).toFixed(1)+'" width="'+(w2-6).toFixed(1)+'" height="1" fill="#d9b45a"/></g>';
+        }
+        s+='<rect x="'+(bx2+w2/2-1.6).toFixed(1)+'" y="'+(ry+sockH-4).toFixed(1)+'" width="2.4" height="3" rx="0.6" fill="#93a9c6" opacity=".9" pointer-events="none"/>';
+        s+='<text x="'+(bx2+pw/2-1.2).toFixed(1)+'" y="'+(ry+sockH+stripH-1.4).toFixed(1)+'" class="cabpn2" text-anchor="middle">'+p+'</text>';
       }
       s+='</g>';
     } else {
@@ -361,8 +357,7 @@ function bindArmarios(){
       if(ev.target.closest('[data-del]'))return;
       if(ev.target.closest('.armport'))return;
       if(ev.target.closest('.devport'))return;
-      if(ev.target.hasAttribute('data-hu'))return;
-      if(ev.target.hasAttribute('data-bulk'))return;
+      if(ev.target.closest('[data-hu],[data-ppn],[data-bulk],[data-del],[data-cfg]'))return;
       ev.preventDefault();
       var idx=+g.getAttribute('data-idx');
       var it=r.items[idx]; if(!it)return;

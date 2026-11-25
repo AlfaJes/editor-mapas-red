@@ -143,6 +143,21 @@
   <div id="clist" style="max-height:56vh;overflow:auto;margin-top:10px"></div>
   <div class="macts"><button class="btn" id="c_close">Cerrar</button></div>
 </div></div>
+<div id="ppm" class="modal"><div class="mbox" style="width:420px">
+  <h3>Patch panel</h3>
+  <div class="hintbox">Define cuántos puertos tiene por fila y en total. La altura en U se calcula sola.</div>
+  <div style="margin-top:10px"><label style="font-size:10px;color:#7d93b3">Nombre</label><input id="ppm_n" style="width:100%"></div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px">
+    <div><label style="font-size:10px;color:#7d93b3">Puertos por fila</label><input id="ppm_pr" type="number" min="6" max="48" step="1" style="width:100%"></div>
+    <div><label style="font-size:10px;color:#7d93b3">Puertos en total</label><input id="ppm_pt" type="number" min="6" max="384" step="1" style="width:100%"></div>
+  </div>
+  <div class="hintbox" id="ppm_info" style="margin-top:8px"></div>
+  <div class="macts" style="margin-top:12px">
+    <button class="btn" id="ppm_del">Quitar del armario</button>
+    <button class="btn" id="ppm_cancel">Cancelar</button>
+    <button class="btn on" id="ppm_ok">Guardar</button>
+  </div>
+</div></div>
 <div id="lnkm" class="modal"><div class="mbox" style="width:460px">
   <h3 id="lnk_t">Puerto</h3>
   <div class="hintbox" id="lnk_sub">Elige qué hay conectado en este puerto.</div>

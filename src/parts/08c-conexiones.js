@@ -134,3 +134,64 @@ document.addEventListener('click', function(ev){
   var dp=t.closest('.devport');
   if(dp){ ev.stopPropagation(); lnkOpenDev(dp.getAttribute('data-dp'), +dp.getAttribute('data-p')); return; }
 });
+
+// ---------- configuracion del patch panel ----------
+var PPX = { idx: -1 };
+function ppInfo() {
+  var per = Math.max(6, Math.min(48, parseInt(document.getElementById('ppm_pr').value, 10) || 24));
+  var tot = Math.max(per, Math.min(per * 8, parseInt(document.getElementById('ppm_pt').value, 10) || per));
+  return { per: per, tot: tot, u: Math.max(1, Math.ceil(tot / per)) };
+}
+function ppRefresh() {
+  var v = ppInfo();
+  document.getElementById('ppm_info').textContent =
+    'Ocupará ' + v.u + 'U (' + v.per + ' por fila · ' + v.tot + ' en total)';
+}
+function ppOpen(idx) {
+  var r = lnkRack(); if (!r) return;
+  var it = r.items[idx]; if (!it || it.k !== 'pp') return;
+  PPX.idx = idx;
+  var per = it.ppr || 24, tot = it.pt || (per * (it.u || 1));
+  document.getElementById('ppm_n').value = it.n || '';
+  document.getElementById('ppm_pr').value = per;
+  document.getElementById('ppm_pt').value = tot;
+  ppRefresh();
+  document.getElementById('ppm').classList.add('on');
+}
+function ppSave() {
+  var r = lnkRack(); var it = r && r.items[PPX.idx]; if (!it) return;
+  var v = ppInfo();
+  var viejo = it.u || 1;
+  it.n = document.getElementById('ppm_n').value.trim() || ('Patch ' + v.tot + 'p');
+  it.ppr = v.per; it.pt = v.tot; it.u = v.u;
+  if (colision(r, it)) {
+    it.u = viejo; it.ppr = v.per; it.pt = v.tot;
+    // intentar reubicar hacia arriba y luego abajo
+    var ok = false;
+    for (var d = 1; d <= 8 && !ok; d++) { it.u0 = (it.u0 || 1) + d; ok = !colision(r, it); if (!ok) it.u0 -= d; }
+    if (!ok) { it.u = viejo; alert('No cabe: el armario no tiene hueco para ' + v.u + 'U seguidas.'); return; }
+  }
+  save(); renderArmarios(); document.getElementById('ppm').classList.remove('on');
+}
+function ppDel() {
+  var r = lnkRack(); var it = r && r.items[PPX.idx]; if (!it) return;
+  r.items.splice(PPX.idx, 1);
+  save(); renderArmarios(); document.getElementById('ppm').classList.remove('on');
+}
+(function(){
+  var o = document.getElementById('ppm_ok'); if (o) o.onclick = ppSave;
+  var c = document.getElementById('ppm_cancel'); if (c) c.onclick = function(){ document.getElementById('ppm').classList.remove('on'); };
+  var d = document.getElementById('ppm_del'); if (d) d.onclick = ppDel;
+  ['ppm_pr','ppm_pt'].forEach(function(id){
+    var e = document.getElementById(id); if (e) e.oninput = function(){
+      var per = parseInt(document.getElementById('ppm_pr').value,10)||24;
+      ppRefresh();
+    };
+  });
+})();
+document.addEventListener('click', function(ev){
+  var t = ev.target;
+  if (!t || !t.closest) return;
+  var c = t.closest('[data-cfg]');
+  if (c) { ev.stopPropagation(); ppOpen(+c.getAttribute('data-cfg')); }
+}, true);
