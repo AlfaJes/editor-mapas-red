@@ -112,7 +112,7 @@ function renderArmarios(){
     '<button class="btn sm" id="rkpng2" title="Descargar en PNG">⤓ PNG</button>'+
     '</div>';
 
-  var U=20, uTot=r.u, H=26+uTot*U+18, X0=64, W=430, Wtot=830;
+  var U=30, uTot=r.u, H=26+uTot*U+18, X0=64, W=490, Wtot=900;
   var s='<div class="cabwrap"><svg class="cabsvg armcab" data-rid="'+r.id+'" viewBox="0 0 '+Wtot+' '+H+'" width="100%" xmlns="http://www.w3.org/2000/svg">';
   s+='<rect x="8" y="8" width="'+(Wtot-16)+'" height="'+(H-16)+'" rx="10" fill="#0d1626" stroke="#243350"/>';
   for(var i=0;i<uTot;i++){
@@ -153,22 +153,25 @@ function renderArmarios(){
       s+='<text class="armu" data-hu="'+idx+'" x="'+(X0+16)+'" y="'+(y+(filas>1?25:hh/2+3.5))+'" title="Altura de este patch ('+filas+'U). Clic para cambiarla.">'+filas+'U</text>';
       s+='<text class="cabxx" data-del="'+idx+'" x="'+(X0+WPP-14)+'" y="'+(y+12)+'" text-anchor="end" title="Quitar">✕</text>';
       s+='<text class="cabbulk" data-bulk="'+idx+'" x="'+(X0+WPP-32)+'" y="'+(y+12)+'" text-anchor="end" title="Enlazar los puertos con el mismo número de un switch">⚡</text>';
-      // 24 puertos RJ45 por U, con separación cada 12
-      var px0=X0+74, pfin=X0+WPP-16;
-      var huecoG=6, pw=(pfin-px0-huecoG)/per;
-      var ph=Math.max(7,(hh-9)/filas-2);
+      // 24 conectores RJ45 por U, en dos bloques de 12
+      var px0=X0+72, pfin=X0+WPP-14, huecoG=8;
+      var pw=(pfin-px0-huecoG)/per;
+      var ah=Math.max(8,(hh-6)/filas-2);
       for(var r2=0;r2<filas;r2++){
         for(var c=0;c<per;c++){
           var p=r2*per+c+1;
           var lk=(it.links&&it.links[p])||null;
-          var bx2=px0+c*pw+(c>=12?huecoG:0);
-          var by2=y+4+r2*(ph+2);
-          s+='<rect class="armport'+(lk?' on':'')+'" data-pp="'+idx+'" data-p="'+p+'" x="'+bx2.toFixed(1)+'" y="'+by2.toFixed(1)+'" width="'+Math.max(3,pw-1.4).toFixed(1)+'" height="'+ph.toFixed(1)+'" rx="1.2"'+
+          var bx2=px0+c*pw+(c>=12?huecoG:0), by2=y+4+r2*(ah+3);
+          // cuerpo del conector keystone
+          s+='<rect class="armport'+(lk?' on':'')+'" data-pp="'+idx+'" data-p="'+p+'" x="'+bx2.toFixed(1)+'" y="'+by2.toFixed(1)+'" width="'+Math.max(4,pw-2.2).toFixed(1)+'" height="'+ah.toFixed(1)+'" rx="1.6"'+
              '><title>Puerto '+p+(lk?(' → '+lk.dev+' P'+lk.port):' (libre)')+'</title></rect>';
-          // muesca del conector
-          s+='<rect x="'+(bx2+1).toFixed(1)+'" y="'+(by2+ph*0.62).toFixed(1)+'" width="'+Math.max(1.2,pw-3.4).toFixed(1)+'" height="1.4" fill="#050b14" opacity=".9" pointer-events="none"/>';
-          if(ph>=9 && pw>=11){
-            s+='<text x="'+(bx2+pw/2-0.7).toFixed(1)+'" y="'+(by2+ph-0.8).toFixed(1)+'" class="cabpn" text-anchor="middle">'+(p%2?p:'')+'</text>';
+          // boca del conector
+          s+='<rect x="'+(bx2+1.8).toFixed(1)+'" y="'+(by2+1.8).toFixed(1)+'" width="'+Math.max(2,pw-5.8).toFixed(1)+'" height="'+(ah-3.6).toFixed(1)+'" rx="1" fill="#050b14" pointer-events="none"/>';
+          // lengüeta inferior
+          s+='<rect x="'+(bx2+pw/2-2).toFixed(1)+'" y="'+(by2+ah-2.6).toFixed(1)+'" width="2.6" height="2.4" rx="0.6" fill="#7f97b5" opacity=".75" pointer-events="none"/>';
+          // numeración
+          if(ah>=11 && pw>=11){
+            s+='<text x="'+(bx2+pw/2-1).toFixed(1)+'" y="'+(by2+ah-3.4).toFixed(1)+'" class="cabpn" text-anchor="middle">'+p+'</text>';
           }
         }
       }
@@ -183,6 +186,7 @@ function renderArmarios(){
       var nm=String(n.nombre||''); if(nm.length>26)nm=nm.slice(0,25)+'…';
       s+='<text x="'+(X0+14)+'" y="'+(y+13)+'" class="cabn">'+escAttr(nm)+'</text>';
       s+='<text x="'+(X0+190)+'" y="'+(y+13)+'" class="cabs">'+escAttr((TYPE[n.tipo]||['',''])[1])+'</text>';
+      s+='<text class="armu" data-hu="'+idx+'" x="'+(X0+W-44)+'" y="'+(y+13)+'" title="Altura en U. Clic para cambiarla.">'+h+'U</text>';
       s+='<text class="cabxx" data-del="'+idx+'" x="'+(X0+W-8)+'" y="'+(y+13)+'" text-anchor="end">✕</text>';
       if(hh>24) s+='<text x="'+(X0+14)+'" y="'+(y+30)+'" class="cabi">'+escAttr(n.ip[0]||'sin IP')+' · '+h+'U</text>';
       // tira de puertos
@@ -279,6 +283,7 @@ function bindArmarios(){
       // comprobar que no choca con lo de arriba
       var fuera=colision(r,it);
       if(fuera){ it.u=viejo; alert('No cabe: hay algo justo encima. Mueve ese elemento primero.'); return; }
+      if(it.k==='dev' && byId[it.id]) byId[it.id].u=nu;
       save(); renderArmarios();
     };
   });
@@ -326,6 +331,8 @@ function bindArmarios(){
     g.addEventListener('mousedown',function(ev){
       if(ev.target.closest('[data-del]'))return;
       if(ev.target.closest('.armport'))return;
+      if(ev.target.hasAttribute('data-hu'))return;
+      if(ev.target.hasAttribute('data-bulk'))return;
       ev.preventDefault();
       var idx=+g.getAttribute('data-idx');
       var it=r.items[idx]; if(!it)return;
@@ -341,7 +348,7 @@ function bindArmarios(){
         var svgEl=g.ownerSVGElement||document.querySelector('.cabsvg');
         var esc=1;
         try{ esc=svgEl.getBoundingClientRect().width/(svgEl.viewBox.baseVal.width||830); }catch(e){}
-        var Upx=Math.max(6,20*(esc||1));
+        var Upx=Math.max(8,30*(esc||1));
         var pasos=Math.round((e2.clientY-y0)/Upx);
         var nuevo=Math.max(1,Math.min(r.u-(it.u||1)+1, u0-pasos));
         if(nuevo===u0)return;
