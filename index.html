@@ -386,14 +386,12 @@ body.viewrack #rack{display:block}
       <button class="btn" id="bPdf">PDF (A4 horizontal)</button>
         <button class="btn on" id="bApp">💾 Guardar copia actualizada (HTML)</button>
       <button class="btn" id="bCsv">Inventario CSV</button>
-      <button class="btn" id="bUpgrade">\u2b06 Actualizar programa (desde archivo)</button>
       <button class="btn" id="bRelayout">Reordenar por rejilla</button>
       <button class="btn danger" id="bReset">Restaurar plantilla</button>
     </div>
     <input type="color" id="cpick" style="position:fixed;left:-100px;top:-100px">
     <input type="file" id="fFile" accept=".json,application/json" style="display:none">
-    <input type="file" id="fHtml" accept=".html,text/html" style="display:none">
-  </div>
+      </div>
 </header>
 <aside>
   <div class="search"><input id="q" type="search" placeholder="Buscar equipo, IP, MAC, modelo…" autocomplete="off"></div>
@@ -1991,28 +1989,6 @@ document.getElementById('bRelayout').onclick=function(){
   doc.zpos=JSON.parse(JSON.stringify(ZBOX));
   nodes.forEach(function(n){ n.nx=n.x; n.ny=n.y; });
   save(); render(); fit();
-};
-document.getElementById('bUpgrade').onclick=function(){
-  document.getElementById('fHtml').click();
-};
-document.getElementById('fHtml').onchange=function(ev){
-  var f=ev.target.files&&ev.target.files[0]; if(!f)return;
-  var rd=new FileReader();
-  rd.onload=function(){
-    var txt=String(rd.result||"");
-    var re=/<script id="seed-data"[^>]*>[\s\S]*?<\/script>/;
-    if(!re.test(txt)){ alert('Ese archivo no parece ser el editor (no encuentro el bloque de datos).'); return; }
-    var seed=JSON.stringify(doc).replace(/</g,'\\u003c');
-    var out=txt.replace(re,'<script id="seed-data" type="application/json">'+seed+'<\/script>');
-    var blob=new Blob([out],{type:'text/html;charset=utf-8'});
-    var a=document.createElement('a');
-    a.href=URL.createObjectURL(blob);
-    a.download='Mapa_Red_Levante_actualizado.html';
-    document.body.appendChild(a); a.click(); a.remove();
-    var b=document.getElementById('dirty'); if(b)b.textContent='version actualizada descargada';
-  };
-  rd.readAsText(f);
-  ev.target.value='';
 };
 document.getElementById('bReset').onclick=()=>{
   if(!confirm('¿Volver a la plantilla? Se perderán los equipos de este proyecto; los demás proyectos no se tocan.'))return;
