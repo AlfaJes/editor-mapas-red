@@ -1,6 +1,20 @@
 // ---------- conexiones dentro del armario ----------
 // Clic en un puerto del patch panel o en un puerto de un equipo: elegir
 // qué equipo y qué puerto hay al otro lado.
+
+// color de un puerto de patch: el de la conexion que lleva, o el del equipo
+function linkColor(lk){
+  if(!lk) return '';
+  var d=byId[lk.devId];
+  if(!d) return '#4f8cff';
+  var e=doc.edges.filter(function(x){
+    return (x.s===lk.devId&&x.pA===lk.port)||(x.t===lk.devId&&x.pB===lk.port);
+  })[0];
+  if(e){ var c=cabColor(e); if(c) return c; }
+  try{ var b=col(d); if(b) return b; }catch(_){}
+  return '#4f8cff';
+}
+
 var LN = { kind: null, idx: -1, port: 0, nodeId: null, rackId: null };
 
 function lnkRack() {

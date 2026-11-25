@@ -172,11 +172,14 @@ function renderArmarios(){
           s+='<rect x="'+px0+'" y="'+(ry+sockH+1).toFixed(1)+'" width="'+(pfin-px0)+'" height="'+stripH+'" rx="1" fill="#c9d4e2" opacity=".92"/>';
         }
         var lk=(it.links&&it.links[p])||null;
+        var lcol=lk?(linkColor(lk)||'#4f8cff'):'';
         var bx2=px0+c*pw+(c>=Math.ceil(per/2)?huecoG:0);
         var w2=Math.max(4,pw-2.6);
         s+='<rect class="armport'+(lk?' on':'')+'" data-pp="'+idx+'" data-p="'+p+'" x="'+(bx2+1.2).toFixed(1)+'" y="'+ry.toFixed(1)+'" width="'+w2.toFixed(1)+'" height="'+sockH.toFixed(1)+'" rx="1.4"'+
+           (lk?' fill="#101c2c" stroke="'+lcol+'" stroke-width="1.1"':'')+
            '><title>Puerto '+p+(lk?(' → '+lk.dev+' P'+lk.port):' (libre)')+'</title></rect>';
-        s+='<rect x="'+(bx2+2.6).toFixed(1)+'" y="'+(ry+1.8).toFixed(1)+'" width="'+Math.max(2,w2-3).toFixed(1)+'" height="'+Math.max(2,sockH-4.6).toFixed(1)+'" rx="0.7" fill="#04101c" stroke="#2b405c" stroke-width=".6" pointer-events="none"/>';
+        // boca: si el puerto lleva algo, se pinta del color de la conexion
+        s+='<rect x="'+(bx2+2.6).toFixed(1)+'" y="'+(ry+1.8).toFixed(1)+'" width="'+Math.max(2,w2-3).toFixed(1)+'" height="'+Math.max(2,sockH-4.6).toFixed(1)+'" rx="0.7" fill="'+(lk?lcol:'#04101c')+'" opacity="'+(lk?'.92':'1')+'" stroke="'+(lk?lcol:'#2b405c')+'" stroke-width=".6" pointer-events="none"/>';
         if(sockH>10){
           s+='<g pointer-events="none" opacity=".55"><rect x="'+(bx2+3.6).toFixed(1)+'" y="'+(ry+3).toFixed(1)+'" width="'+(w2-6).toFixed(1)+'" height="1" fill="#d9b45a"/><rect x="'+(bx2+3.6).toFixed(1)+'" y="'+(ry+5).toFixed(1)+'" width="'+(w2-6).toFixed(1)+'" height="1" fill="#d9b45a"/></g>';
         }
@@ -202,7 +205,10 @@ function renderArmarios(){
       s+='<rect x="'+(px1-3)+'" y="'+(y+hh-11)+'" width="'+((cap*step)+5).toFixed(1)+'" height="9" rx="2" fill="#0b1524" opacity=".65" pointer-events="none"/>';
       for(var q=1;q<=cap;q++){
         var used=doc.edges.some(function(e){return (e.s===n.id&&e.pA===q)||(e.t===n.id&&e.pB===q);});
+        var edg=used?doc.edges.filter(function(e){return (e.s===n.id&&e.pA===q)||(e.t===n.id&&e.pB===q);})[0]:null;
+        var dcol=edg?(cabColor(edg)||'#4f8cff'):'';
         s+='<rect class="devport'+(used?' on':'')+'" data-dp="'+n.id+'" data-p="'+q+'" x="'+(px1+(q-1)*step).toFixed(1)+'" y="'+(y+hh-9.5)+'" width="'+Math.max(2,step-1.6).toFixed(1)+'" height="6" rx="1"'+
+           (used?' fill="'+dcol+'"':'')+
            '><title>P'+q+(used?' (ocupado)':' (libre)')+'</title></rect>';
       }
       // altura y quitar, en el margen derecho
