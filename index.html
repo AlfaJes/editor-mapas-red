@@ -455,7 +455,7 @@ header{grid-column:1/-1;display:flex;flex-direction:column;gap:0;padding:0;align
   <textarea id="n_text" placeholder="Escribe el texto que quieras anotar en el mapa…" style="width:100%;min-height:110px;background:#0c1626;border:1px solid #26374f;border-radius:8px;color:#dbe9ff;padding:8px;font:12px/1.45 system-ui"></textarea>
   <div style="display:flex;gap:12px;margin-top:12px;align-items:end">
     <label style="font-size:10px;color:#7d93b3">Tamaño<br><input id="n_sz" type="number" min="8" max="30" value="13" style="width:64px"></label>
-    <label style="font-size:10px;color:#7d93b3">Ancho<br><input id="n_w" type="number" min="90" max="600" step="10" value="220" style="width:74px"></label>
+    <label style="font-size:10px;color:#7d93b3">Ancho<br><input id="n_w" type="number" min="40" max="600" step="10" value="220" style="width:74px"></label>
     <label style="font-size:10px;color:#7d93b3">Color<br><input id="n_col" type="color" value="#8fc7ff" style="width:46px;height:26px;padding:0"></label>
     <label style="font-size:10px;color:#7d93b3">Sección<br><select id="n_zone" style="max-width:150px"><option value="">— suelto —</option></select></label>
     <label style="font-size:10px;color:#7d93b3" id="n_style_wrap">Estilo<br><select id="n_style"><option value="line">Línea con punta</option><option value="dash">Discontinua</option><option value="dotted">Punteada</option><option value="double">Doble punta</option><option value="block">Bloque</option></select></label>
@@ -1914,8 +1914,8 @@ window.addEventListener('mousemove',e=>{
   }
   if(nres){
     const dx=(e.clientX-nres.sx)/t.k, dy=(e.clientY-nres.sy)/t.k;
-    nres.n.w=Math.max(90,sn(nres.w0+dx));
-    nres.n.hFix=Math.max(32,sn(nres.h0+dy));
+    nres.n.w=Math.max(40,sn(nres.w0+dx));
+    nres.n.hFix=Math.max(22,sn(nres.h0+dy));
     render(); return;
   }
   if(ndrag){
@@ -2463,7 +2463,7 @@ function saveApp(){
 }
 var ndrag=null, nres=null, NT={kind:'note',e:null};
 function noteLines(txt,w,sz){
-  var maxc=Math.max(8,Math.floor((w-20)/(sz*0.55)));
+  var maxc=Math.max(4,Math.floor((w-20)/(sz*0.55)));
   var out=[];
   String(txt||'').split(/\n/).forEach(function(par){
     if(!par.length){ out.push(''); return; }
@@ -2483,7 +2483,7 @@ function notesHTML(){
     var nx=zb?(zb.x+(nn.ox||0)):nn.x, ny=zb?(zb.y+(nn.oy||0)):nn.y;
     nn._x=nx; nn._y=ny;
     var lines=noteLines(nn.t,w,sz);
-    var hh=Math.max(30,lines.length*sz*1.4+14);
+    var hh=Math.max(20,lines.length*sz*1.4+14);
     if(nn.hFix)hh=Math.max(hh,nn.hFix);
     nn.h=hh;
     var cls='note'+(state.noteId===nn.id?' sel2':'');
@@ -2532,7 +2532,7 @@ function openEdgeNote(ed){
 function saveNote(){
   var txt=document.getElementById('n_text').value;
   var sz=Math.max(8,Math.min(30,parseInt(document.getElementById('n_sz').value)||13));
-  var w=Math.max(90,Math.min(600,parseInt(document.getElementById('n_w').value)||220));
+  var w=Math.max(40,Math.min(600,parseInt(document.getElementById('n_w').value)||220));
   var col=document.getElementById('n_col').value;
   if(NT.kind==='arrow'&&NT.ar){
     snap();
