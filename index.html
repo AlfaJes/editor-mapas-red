@@ -454,6 +454,7 @@ header{grid-column:1/-1;display:flex;flex-direction:column;gap:0;padding:0;align
     <button class="btn sm tog" id="bSide" title="Ocultar o mostrar la lista de equipos">◧ Equipos</button>
     <button class="btn sm" id="bRack" title="Vista de rack por puertos">🗄 Rack</button>
     <button class="btn sm" id="bZonas" title="Crear, renombrar y borrar secciones">🗂 Secciones</button>
+    <button class="btn sm" id="bNets2" title="Crear redes y elegir sus colores">🌐 Redes</button>
     <button class="btn sm" id="bPath" title="Calcular ruta entre dos equipos">🧭 Ruta</button>
     <button class="btn sm" id="bCheck" title="Avisos de configuración">⚠ Revisión</button>
     <button class="btn sm" id="bPing" title="Comprobar si todos los equipos se ven entre sí">🩺 Ping</button>
@@ -2969,8 +2970,10 @@ function renderRedes(){
     };
   });
 }
-document.getElementById('bNets').onclick=function(){ var m=document.getElementById('moreMenu'); if(m)m.classList.remove('on');
-  renderRedes(); document.getElementById('rnm').classList.add('on'); };
+function openRedes(){ var m=document.getElementById('moreMenu'); if(m)m.classList.remove('on');
+  renderRedes(); document.getElementById('rnm').classList.add('on'); }
+document.getElementById('bNets').onclick=openRedes;
+(function(){ var b=document.getElementById('bNets2'); if(b)b.onclick=openRedes; })();
 document.getElementById('rnclose').onclick=function(){ document.getElementById('rnm').classList.remove('on'); };
 document.getElementById('rnadd').onclick=function(){
   var n=document.getElementById('rnname').value.trim(), p=document.getElementById('rnpre').value.trim(), c=document.getElementById('rncol').value;
