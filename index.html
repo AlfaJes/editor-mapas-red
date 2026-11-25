@@ -678,6 +678,7 @@ function ensureEdges(){
   doc.edges.forEach(e=>{ if(!e.port){const u=used[e.h]=used[e.h]||new Set();let p=1;while(u.has(p))p++;u.add(p);e.port=p;} });
 }
 function rebuild(){
+  if(Array.isArray(doc.zlock))doc.zlock=doc.zlock.filter(function(z){return typeof z==='string'&&z.indexOf('${')<0;});
   nodes=doc.nodes.map(normalize);
   byId={}; nodes.forEach(n=>byId[n.id]=n);
   ensureEdges();
@@ -840,10 +841,20 @@ function renderZmodal(){
     return `<div class="zrow"><span class="zn" data-ren="${escAttr(z)}" title="Clic para cambiar el nombre">${escAttr(z)}<i class="pen">✎</i></span>
       <span class="zc">${cnt} equipos${kids?' · '+kids+' sub':''}</span>
       <select data-z="${escAttr(z)}">${opts}</select>
-      <span class="zact">${vacia?'':'<button class="x" data-mv="${escAttr(z)}" title="Mover estos equipos a otra zona">⇄</button>'}
+      <span class="zact">${((doc.zlock||[]).indexOf(z)>=0
+        ? '<button class="x" data-lock="'+escAttr(z)+'" title="Sección fija: no se puede mover. Pulsa para desbloquear" style="color:#4f8cff">\ud83d\udd12</button>'
+        : '<button class="x" data-lock="'+escAttr(z)+'" title="Fijar esta sección para que no se mueva">\ud83d\udd13</button>')}${vacia?'':'<button class="x" data-mv="${escAttr(z)}" title="Mover estos equipos a otra zona">⇄</button>'}
       <button class="x" data-del="${escAttr(z)}" title="${vacia?'Eliminar zona':'Tiene '+cnt+' equipos: no se puede eliminar'}"
         style="${vacia?'':'opacity:.45;cursor:not-allowed'}">✕</button></span></div>`;
   }).join('');
+  box.querySelectorAll('button[data-lock]').forEach(function(b){
+    b.onclick=function(){ var z=b.dataset.lock;
+      doc.zlock=doc.zlock||[];
+      var i=doc.zlock.indexOf(z);
+      if(i>=0)doc.zlock.splice(i,1); else doc.zlock.push(z);
+      save(); renderZmodal(); render();
+    };
+  });
   box.querySelectorAll('button[data-del]').forEach(function(b){
     b.onclick=function(){ borrarZona(b.dataset.del); };
   });
@@ -2015,7 +2026,7 @@ svg.addEventListener('mousedown',e=>{
   }
   const zd=e.target.dataset&&e.target.dataset.zona;
   if(zd&&e.target.classList.contains('zh')){
-    if(state.lockZones){ pan={x:e.clientX,y:e.clientY,tx:t.x,ty:t.y}; svg.classList.add('pan'); return; }
+    if(state.lockZones||((doc.zlock||[]).indexOf(zd)>=0)){ pan={x:e.clientX,y:e.clientY,tx:t.x,ty:t.y}; svg.classList.add('pan'); return; }
     const box=ZBOX.find(b=>b.z===zd);
     zres={z:zd,sx:e.clientX,sy:e.clientY,w0:box?box.w:220,h0:box?box.h:130};
     svg.classList.add('pan'); return;
@@ -2054,7 +2065,7 @@ svg.addEventListener('mousedown',e=>{
     return;}
   const isHull=zd&&(e.target.classList.contains('hull')||e.target.classList.contains('hull-l')||e.target.classList.contains('hull-pill'));
   if(isHull){
-    if(state.lockZones){ pan={x:e.clientX,y:e.clientY,tx:t.x,ty:t.y}; svg.classList.add('pan'); return; }
+    if(state.lockZones||((doc.zlock||[]).indexOf(zd)>=0)){ pan={x:e.clientX,y:e.clientY,tx:t.x,ty:t.y}; svg.classList.add('pan'); return; }
     const zs=[zd].concat(descZonas(zd));
     zdrag={z:zd,sx:e.clientX,sy:e.clientY,moved:false,
       boxes:zs.map(z=>{const b=ZBOX.find(x=>x.z===z);return b?{b,x:b.x,y:b.y}:null;}).filter(Boolean),
