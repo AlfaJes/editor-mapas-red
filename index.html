@@ -2014,6 +2014,14 @@ svg.addEventListener('wheel',e=>{e.preventDefault();
   t.x=mx-(mx-t.x)*(k2/t.k); t.y=my-(my-t.y)*(k2/t.k); t.k=k2; applyT();},{passive:false});
 let pan=null,drag=null,zdrag=null,zres=null,bh=null,dgroup=null,d0=null,suppressClick=false,sbox=null;
 svg.addEventListener('mousedown',e=>{
+  if(e.shiftKey){
+    const r=svg.getBoundingClientRect();
+    const wx=(e.clientX-r.left-t.x)/t.k, wy=(e.clientY-r.top-t.y)/t.k;
+    sbox={x:wx,y:wy,x0:wx,y0:wy,add:e.ctrlKey||e.metaKey};
+    const sb=document.getElementById('selbox');
+    if(sb){sb.setAttribute('x',wx);sb.setAttribute('y',wy);sb.setAttribute('width',0);sb.setAttribute('height',0);sb.style.display='';}
+    svg.classList.add('pan'); return;
+  }
   const ehEl=e.target.closest?e.target.closest('.eh,.ehadd'):null;
   if(ehEl){const pp=ehEl.dataset.e.split('|');
     const ed=doc.edges.find(x=>(x.s===pp[0]&&x.t===pp[1])||(x.s===pp[1]&&x.t===pp[0]));
@@ -2085,14 +2093,6 @@ svg.addEventListener('mousedown',e=>{
       svg.classList.add('pan'); return;
     }
     drag=byId[g.dataset.id];drag._moved=false;return;}
-  if(e.shiftKey){
-    const r=svg.getBoundingClientRect();
-    const wx=(e.clientX-r.left-t.x)/t.k, wy=(e.clientY-r.top-t.y)/t.k;
-    sbox={x:wx,y:wy,x0:wx,y0:wy,add:e.ctrlKey||e.metaKey};
-    const sb=document.getElementById('selbox');
-    if(sb){sb.setAttribute('x',wx);sb.setAttribute('y',wy);sb.setAttribute('width',0);sb.setAttribute('height',0);sb.style.display='';}
-    svg.classList.add('pan'); return;
-  }
   pan={x:e.clientX,y:e.clientY,tx:t.x,ty:t.y};svg.classList.add('pan');});
 window.addEventListener('mousemove',e=>{
   if(sbox){
