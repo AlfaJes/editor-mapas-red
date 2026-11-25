@@ -112,7 +112,7 @@ function renderArmarios(){
     '<button class="btn sm" id="rkpng2" title="Descargar en PNG">⤓ PNG</button>'+
     '</div>';
 
-  var U=30, uTot=r.u, H=26+uTot*U+18, X0=64, W=490, Wtot=900;
+  var U=30, uTot=r.u, H=26+uTot*U+18, X0=64, W=620, Wtot=780;
   var s='<div class="cabwrap"><svg class="cabsvg armcab" data-rid="'+r.id+'" viewBox="0 0 '+Wtot+' '+H+'" width="100%" xmlns="http://www.w3.org/2000/svg">';
   s+='<rect x="8" y="8" width="'+(Wtot-16)+'" height="'+(H-16)+'" rx="10" fill="#0d1626" stroke="#243350"/>';
   for(var i=0;i<uTot;i++){
@@ -140,7 +140,7 @@ function renderArmarios(){
     } else if(it.k==='pp'){
       var filas=Math.max(1,Math.min(3,it.u||1));
       var per=Math.max(6,Math.min(48,it.ppr||24)), total=per*filas;
-      var WPP=W+120;                       // el panel aprovecha el hueco de cables
+      var WPP=W;
       s+='<g class="armitem pp" data-idx="'+idx+'" data-pp="1" data-y="'+y+'">';
       // chapa frontal con dos tonos
       s+='<rect x="'+X0+'" y="'+y+'" width="'+WPP+'" height="'+hh+'" rx="3" fill="#1b2a42" stroke="#5a7699" stroke-width="1.2"/>';
@@ -151,13 +151,14 @@ function renderArmarios(){
       s+='<circle cx="'+(X0-2)+'" cy="'+(y+hh/2)+'" r="1.8" fill="#93a9c6"/>';
       s+='<circle cx="'+(X0+WPP+2)+'" cy="'+(y+hh/2)+'" r="1.8" fill="#93a9c6"/>';
       // etiqueta y controles
-      s+='<text x="'+(X0+16)+'" y="'+(y+(filas>1?13:hh/2+3.5))+'" class="cabn">'+escAttr(it.n||('Patch '+total+'p'))+'</text>';
-      s+='<text class="armu" data-hu="'+idx+'" x="'+(X0+16)+'" y="'+(y+(filas>1?25:hh/2+3.5))+'" title="Altura de este patch ('+filas+'U). Clic para cambiarla.">'+filas+'U</text>';
-      s+='<text class="armu" data-ppn="'+idx+'" x="'+(X0+40)+'" y="'+(y+(filas>1?25:hh/2+3.5))+'" title="Puertos por fila. Clic para cambiarlos.">'+per+'P/fila</text>';
-      s+='<text class="cabbulk" data-bulk="'+idx+'" x="'+(X0+WPP-74)+'" y="'+(y+13)+'" title="Enlazar los puertos con el mismo número de un switch">⚡</text>';
-      s+='<text class="cabxx" data-del="'+idx+'" x="'+(X0+WPP-10)+'" y="'+(y+13)+'" text-anchor="end" title="Quitar">✕</text>';
+      var pn=String(it.n||('Patch '+total+'p')); if(pn.length>22)pn=pn.slice(0,21)+'…';
+      s+='<text x="'+(X0+14)+'" y="'+(y+13)+'" class="cabn2">'+escAttr(pn)+'<title>'+escAttr(it.n||'')+'</title></text>';
+      s+='<text class="armu" data-hu="'+idx+'" x="'+(X0+14)+'" y="'+(y+26)+'" title="Altura que ocupa. Clic para cambiarla.">'+filas+'U</text>';
+      s+='<text class="armu" data-ppn="'+idx+'" x="'+(X0+38)+'" y="'+(y+26)+'" title="Puertos por fila. Clic para cambiarlos.">'+per+' por fila · '+total+'p</text>';
+      s+='<text class="cabbulk" data-bulk="'+idx+'" x="'+(X0+WPP-74)+'" y="'+(filas>1?26:hh/2+4)+'" title="Enlazar los puertos con el mismo número de un switch">⚡</text>';
+      s+='<text class="cabxx" data-del="'+idx+'" x="'+(X0+WPP-10)+'" y="'+(filas>1?26:hh/2+4)+'" text-anchor="end" title="Quitar">✕</text>';
       // conectores RJ45 en dos bloques, con tira de numeracion como los paneles reales
-      var px0=X0+72, pfin=X0+WPP-84, huecoG=10;
+      var px0=X0+140, pfin=X0+WPP-88, huecoG=10;
       var pw=(pfin-px0-huecoG)/per;
       var rowH=(hh-4)/filas;                 // alto de cada fila
       var stripH=8;                          // tira blanca de numeros
@@ -195,13 +196,13 @@ function renderArmarios(){
       s+='<rect x="'+X0+'" y="'+y+'" width="'+W+'" height="'+hh+'" rx="4" fill="#132239" stroke="#2b4368"/>';
       s+='<rect x="'+X0+'" y="'+y+'" width="5" height="'+hh+'" rx="2" fill="'+c+'"/>';
       var nm=String(n.nombre||'');
-      var maxc=hh>26?26:22; if(nm.length>maxc)nm=nm.slice(0,maxc-1)+'…';
+      var maxc=hh>26?26:24; if(nm.length>maxc)nm=nm.slice(0,maxc-1)+'…';
       var baseY=y+(hh>26?13:Math.min(hh-4,Math.round(hh/2+3.5)));
       // nombre a la izquierda, con hueco reservado
       s+='<text x="'+(X0+12)+'" y="'+baseY+'" class="cabn">'+escAttr(nm)+'<title>'+escAttr(n.nombre)+' · '+escAttr((TYPE[n.tipo]||['',''])[1])+'</title></text>';
       // tira de puertos en su banda
       var cap=Math.min(32,capFor(n.id));
-      var px1=X0+178, px2=X0+W-64, step=Math.min(9,(px2-px1)/Math.max(1,cap));
+      var px1=X0+200, px2=X0+W-76, step=Math.min(9,(px2-px1)/Math.max(1,cap));
       s+='<rect x="'+(px1-3)+'" y="'+(y+hh-11)+'" width="'+((cap*step)+5).toFixed(1)+'" height="9" rx="2" fill="#0b1524" opacity=".65" pointer-events="none"/>';
       for(var q=1;q<=cap;q++){
         var used=doc.edges.some(function(e){return (e.s===n.id&&e.pA===q)||(e.t===n.id&&e.pB===q);});
@@ -209,8 +210,8 @@ function renderArmarios(){
            '><title>P'+q+(used?' (ocupado)':' (libre)')+'</title></rect>';
       }
       // altura y quitar, en el margen derecho
-      s+='<text class="armu" data-hu="'+idx+'" x="'+(X0+W-56)+'" y="'+baseY+'" title="Altura en U. Clic para cambiarla.">'+h+'U</text>';
-      s+='<text class="cabxx" data-del="'+idx+'" x="'+(X0+W-12)+'" y="'+baseY+'" text-anchor="end" title="Quitar">✕</text>';
+      s+='<text class="armu" data-hu="'+idx+'" x="'+(X0+W-70)+'" y="'+baseY+'" title="Altura en U. Clic para cambiarla.">'+h+'U</text>';
+      s+='<text class="cabxx" data-del="'+idx+'" x="'+(X0+W-14)+'" y="'+baseY+'" text-anchor="end" title="Quitar">✕</text>';
       s+='</g>';
     }
   });
