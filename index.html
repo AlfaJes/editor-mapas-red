@@ -406,7 +406,7 @@ header{grid-column:1/-1;display:flex;flex-direction:column;gap:0;padding:0;align
     <button class="btn sm tog on" id="bLabels">Etiquetas</button>
     <button class="btn sm tog on" id="bEdges">Cables</button>
     <button class="btn sm tog on" id="bHull">Cajas</button>
-    <button class="btn sm tog" id="bGrid">Rejilla</button>
+    <button class="btn sm tog on" id="bGrid">Rejilla</button>
     <button class="btn sm" id="bEdge" title="Forma de los cables">Curvo</button>
     <span class="gsep"></span>
     <span class="glabel">Paneles</span>
@@ -534,7 +534,7 @@ const FRESH=JSON.parse(JSON.stringify(DATA));
 let doc, nodes=[], edges=[], byId={}, adj={}, zonas=[], hist=[];
 const state={editing:null,q:'',types:new Set(Object.keys(TYPE)),zona:'',red:'',labels:true,edges:true,hulls:true,showIp:true,
   sel:null,edit:false,linkMode:false,pending:null,view:'mapa',msel:new Set(),
-  nets:new Set(),colorBy:'tipo',grid:false,snap:true,path:null,pathA:null,pathMode:false,elab:true};
+  nets:new Set(),colorBy:'tipo',grid:true,snap:true,path:null,pathA:null,pathMode:false,elab:true};
 
 // ---------- modelo ----------
 function computeNets(n){
@@ -3134,5 +3134,6 @@ document.getElementById('p_close').onclick=function(){ document.getElementById('
 // ---------- init ----------
 loadDoc(); if(!restoreLayout())layout(); rebuildUI(); syncEdit(); applyTitle(); bindTitle(); fit(); render(); renderList(); showDetail();
 document.getElementById('bEdge').textContent='Trazado: '+(doc.estyle==='orto'?'ortogonal':(doc.estyle||'curvo'));
+setBtn('bGrid',!!state.grid);
 
 </script></body></html>
