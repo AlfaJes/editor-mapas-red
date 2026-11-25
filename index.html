@@ -138,7 +138,8 @@ color:#dbe9ff;font:inherit;font-size:11px;padding:3px 5px}
 .ah.vin{fill:#ffd7a1;stroke:#b98a3f}
 .portsl{background:#0c1626;border:1px solid #26374f;border-radius:5px;color:#dbe9ff;padding:2px 4px}
 .ahit{stroke:transparent;stroke-width:16;cursor:move;fill:none}
-.ehadd{fill:rgba(79,140,255,.25);stroke:#6ea8ff;stroke-width:1;cursor:copy;opacity:.7}
+.ehadd{fill:rgba(79,140,255,.35);stroke:#9cc4ff;stroke-width:1.4;cursor:copy;opacity:.85;pointer-events:all}
+#gHandles .ehadd:hover{fill:rgba(79,140,255,.6);opacity:1}
 .ehadd:hover{opacity:1;fill:rgba(79,140,255,.55)}
 .nzh,.nzh2{fill:rgba(79,140,255,.3);stroke:#4f8cff;stroke-width:1;cursor:nwse-resize;opacity:.55}
 .note:hover .nzh,.note:hover .nzh2{opacity:1;fill:rgba(79,140,255,.7)}
@@ -323,7 +324,8 @@ body.viewrack #rack{display:block}
 /* asas */
 .zh{fill:rgba(79,140,255,.25);stroke:#4f8cff;stroke-width:1.2;cursor:nwse-resize}
 .zh:hover{fill:rgba(79,140,255,.6)}
-.eh{fill:#0a1120;stroke:#4f8cff;stroke-width:2;cursor:move}
+.eh{fill:#0a1120;stroke:#6ea8ff;stroke-width:2.4;cursor:move;pointer-events:all}
+#gHandles .eh:hover{stroke:#9cc4ff;fill:#16294a}
 .eh:hover{fill:#4f8cff}
 /* leyenda con color picker */
 .legend .lg{display:inline-flex;align-items:center;gap:5px}
@@ -470,7 +472,7 @@ header{grid-column:1/-1;display:flex;flex-direction:column;gap:0;padding:0;align
 </aside>
 <main>
   <svg id="map" xmlns="http://www.w3.org/2000/svg"><defs><pattern id="gridp" width="12" height="12" patternUnits="userSpaceOnUse"><path d="M12 0H0V12" fill="none" stroke="#182740" stroke-width="1"/></pattern></defs><g id="world"><rect id="gridrect" x="-3000" y="-3000" width="12000" height="9000" fill="url(#gridp)" style="display:none"/>
-    <g id="gHulls"></g><g id="gEdges"></g><g id="gNodes"></g><g id="gLabels"></g><g id="gELab"></g><g id="gArrows"></g><g id="gNotes"></g></g></svg>
+    <g id="gHulls"></g><g id="gEdges"></g><g id="gNodes"></g><g id="gLabels"></g><g id="gELab"></g><g id="gArrows"></g><g id="gNotes"></g><g id="gHandles"></g></g></svg>
   <div class="legend" id="legend"></div>
   <div id="rack"></div>
   <footer>Arrastra para mover · rueda para zoom · clic en equipo para ver/editar · borde = red · Ctrl+Z deshace</footer>
@@ -950,7 +952,8 @@ function restoreLayout(){
 const svg=document.getElementById('map'),world=document.getElementById('world');
 const G=document.getElementById('gEdges'),GH=document.getElementById('gHulls'),
       GN=document.getElementById('gNodes'),GL=document.getElementById('gLabels'),
-      GE=document.getElementById('gELab');
+      GE=document.getElementById('gELab'),
+      GX=document.getElementById('gHandles');
 const tip=document.getElementById('tip');
 const t={x:0,y:0,k:1};
 function applyT(){ world.setAttribute('transform',`translate(${t.x},${t.y}) scale(${t.k})`);
@@ -1178,7 +1181,8 @@ function render(){
     const onP=state.path&&inPath(e.s,e.t);
     return `<path class="edge${hl?' hl':''}${e.hide?' hid':''}${onP?' on':''}" d="${d}"${e.color?` style="stroke:${e.color}"`:''}/>
       <path class="edge-hit" data-e="${e.s}|${e.t}" d="${d}"/>${elabBox(e)}`;}).join(''):'')
-    +(state.esel?(()=>{const e=doc.edges.find(x=>(x.s===state.esel.s&&x.t===state.esel.t)||(x.s===state.esel.t&&x.t===state.esel.s));
+    ;
+  GX.innerHTML=(state.esel?(()=>{const e=doc.edges.find(x=>(x.s===state.esel.s&&x.t===state.esel.t)||(x.s===state.esel.t&&x.t===state.esel.s));
       if(!e)return'';
       const AA=byId[e.s],BB=byId[e.t],PP=Array.isArray(e.pts)?e.pts:[];
       const anch=[[AA.x,AA.y]].concat(PP).concat([[BB.x,BB.y]]);
@@ -1192,7 +1196,7 @@ function render(){
       }
       return out;})():'');
   (function ajustarAsas(){
-    var asas=G.querySelectorAll('.ehadd,.eh');
+    var asas=GX.querySelectorAll('.ehadd,.eh');
     for(var i=0;i<asas.length;i++){
       var c=asas[i], key=c.getAttribute('data-e');
       if(!key)continue;
@@ -2010,6 +2014,22 @@ svg.addEventListener('wheel',e=>{e.preventDefault();
   t.x=mx-(mx-t.x)*(k2/t.k); t.y=my-(my-t.y)*(k2/t.k); t.k=k2; applyT();},{passive:false});
 let pan=null,drag=null,zdrag=null,zres=null,bh=null,dgroup=null,d0=null,suppressClick=false;
 svg.addEventListener('mousedown',e=>{
+  const ehEl=e.target.closest?e.target.closest('.eh,.ehadd'):null;
+  if(ehEl){const pp=ehEl.dataset.e.split('|');
+    const ed=doc.edges.find(x=>(x.s===pp[0]&&x.t===pp[1])||(x.s===pp[1]&&x.t===pp[0]));
+    if(ed){
+      ed.pts=Array.isArray(ed.pts)?ed.pts:[];
+      let idx=0;
+      if(ehEl.classList.contains('ehadd')){
+        if(ed.pts.length>=12){ alert('M\u00e1ximo 12 puntos por cable. Arrastra o junta los que ya hay.'); return; }
+        idx=parseInt(ehEl.dataset.mi)||0;
+        ed.pts.splice(idx,0,[sn(parseFloat(ehEl.getAttribute('cx'))),sn(parseFloat(ehEl.getAttribute('cy')))]);
+      } else {
+        idx=parseInt(ehEl.dataset.i); if(isNaN(idx))idx=0;
+      }
+      bh={e:ed,i:idx}; svg.classList.add('pan');
+    }
+    return;}
   if(e.target.classList&&(e.target.classList.contains('nzh')||e.target.classList.contains('nzh2'))){
     const gy=e.target.closest('.note');
     const nn=gy?(doc.notes||[]).filter(x=>x.id===gy.dataset.nid)[0]:null;
@@ -2047,22 +2067,6 @@ svg.addEventListener('mousedown',e=>{
       svg.classList.add('pan'); }
     return;
   }
-  const ehEl=e.target.closest?e.target.closest('.eh,.ehadd'):null;
-  if(ehEl){const pp=ehEl.dataset.e.split('|');
-    const ed=doc.edges.find(x=>(x.s===pp[0]&&x.t===pp[1])||(x.s===pp[1]&&x.t===pp[0]));
-    if(ed){
-      ed.pts=Array.isArray(ed.pts)?ed.pts:[];
-      let idx=0;
-      if(ehEl.classList.contains('ehadd')){
-        if(ed.pts.length>=12){ alert('M\u00e1ximo 12 puntos por cable. Arrastra o junta los que ya hay.'); return; }
-        idx=parseInt(ehEl.dataset.mi)||0;
-        ed.pts.splice(idx,0,[sn(parseFloat(ehEl.getAttribute('cx'))),sn(parseFloat(ehEl.getAttribute('cy')))]);
-      } else {
-        idx=parseInt(ehEl.dataset.i); if(isNaN(idx))idx=0;
-      }
-      bh={e:ed,i:idx}; svg.classList.add('pan');
-    }
-    return;}
   const isHull=zd&&(e.target.classList.contains('hull')||e.target.classList.contains('hull-l')||e.target.classList.contains('hull-pill'));
   if(isHull){
     if(state.lockZones||((doc.zlock||[]).indexOf(zd)>=0)){ pan={x:e.clientX,y:e.clientY,tx:t.x,ty:t.y}; svg.classList.add('pan'); return; }
