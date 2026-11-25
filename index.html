@@ -1792,7 +1792,7 @@ svg.addEventListener('mousedown',e=>{
   const ahd=e.target.closest?e.target.closest('.ah'):null;
   if(ahd){
     const ar=(doc.arrows||[]).filter(x=>x.id===ahd.dataset.aid)[0];
-    if(ar){ if(ahd.dataset.end==='2'){delete ar.n2;delete ar.z2;} else {delete ar.n1;delete ar.z1;}
+    if(ar){ if(ahd.dataset.end==='2'){delete ar.n2;delete ar.z2;delete ar.nt2;} else {delete ar.n1;delete ar.z1;delete ar.nt1;}
       adrag={a:ar,end:ahd.dataset.end==='2'?2:1}; svg.classList.add('pan'); }
     return;
   }
@@ -1800,7 +1800,7 @@ svg.addEventListener('mousedown',e=>{
   if(aht){
     const ar=(doc.arrows||[]).filter(x=>x.id===aht.dataset.aid)[0];
     if(ar){ state.arrowSel=ar.id; state.sel=null; state.esel=null;
-      delete ar.n1; delete ar.n2; delete ar.z1; delete ar.z2;
+      delete ar.n1; delete ar.n2; delete ar.z1; delete ar.z2; delete ar.nt1; delete ar.nt2;
       adrag={a:ar,move:true,sx:e.clientX,sy:e.clientY,ox:ar.x1,oy:ar.y1,ox2:ar.x2,oy2:ar.y2};
       svg.classList.add('pan'); }
     return;
@@ -2547,6 +2547,13 @@ svg.addEventListener('dblclick',function(e){
   if(el){ openNote(el.dataset.nid); }
 });
 
+function noteAt(x,y){
+  var hit=(doc.notes||[]).filter(function(nn){
+    var nb=noteBox(nn.id);
+    return nb&&x>=nb.x&&x<=nb.x+nb.w&&y>=nb.y&&y<=nb.y+nb.h;
+  })[0];
+  return hit?hit.id:null;
+}
 function snapArrowEnd(a,end){
   var p = end===2?[a.x2,a.y2]:[a.x1,a.y1];
   var best=null,bd=1e9;
@@ -2559,10 +2566,17 @@ function snapArrowEnd(a,end){
     else {a.n1=best.id;a.x1=best.x;a.y1=best.y;}
   } else {
     if(end===2)delete a.n2; else delete a.n1;
-    var z=zoneAt(p[0],p[1]);
-    if(z){ var c=zoneCenter(z)||p; 
-      if(end===2){a.z2=z;a.x2=c[0];a.y2=c[1];} else {a.z1=z;a.x1=c[0];a.y1=c[1];}
-    } else { if(end===2)delete a.z2; else delete a.z1; }
+    var nAt=noteAt(p[0],p[1]);
+    if(nAt){
+      if(end===2){a.nt2=nAt; delete a.z2;} else {a.nt1=nAt; delete a.z1;}
+      if(end===2){a.x2=p[0];a.y2=p[1];} else {a.x1=p[0];a.y1=p[1];}
+    } else {
+      if(end===2)delete a.nt2; else delete a.nt1;
+      var z=zoneAt(p[0],p[1]);
+      if(z){ var c=zoneCenter(z)||p; 
+        if(end===2){a.z2=z;a.x2=c[0];a.y2=c[1];} else {a.z1=z;a.x1=c[0];a.y1=c[1];}
+      } else { if(end===2)delete a.z2; else delete a.z1; }
+    }
   }
 }
 var adrag=null;
@@ -2575,9 +2589,17 @@ function zoneCenter(z){
   return b?[b.x+b.w/2,b.y+b.h/2]:null;
 }
 function boxOf(z){ return ZBOX.filter(function(q){return q.z===z;})[0]||null; }
+function noteBox(id){
+  var nn=(doc.notes||[]).filter(function(x){return x.id===id;})[0];
+  if(!nn)return null;
+  var x=(typeof nn._x==='number')?nn._x:nn.x, y=(typeof nn._y==='number')?nn._y:nn.y;
+  return {x:x,y:y,w:nn.w||220,h:nn.h||40};
+}
 function rawPt(a,end){
   var nid=(end===2)?a.n2:a.n1, zid=(end===2)?a.z2:a.z1;
   if(nid&&byId[nid])return [byId[nid].x,byId[nid].y];
+  var tid=(end===2)?a.nt2:a.nt1;
+  if(tid){var nb=noteBox(tid); if(nb)return [nb.x+nb.w/2,nb.y+nb.h/2];}
   if(zid){var b=boxOf(zid); if(b)return [b.x+b.w/2,b.y+b.h/2];}
   return (end===2)?[a.x2,a.y2]:[a.x1,a.y1];
 }
@@ -2596,6 +2618,11 @@ function borderPoint(b,from){
 function arrowPt(a,end){
   var nid=(end===2)?a.n2:a.n1, zid=(end===2)?a.z2:a.z1;
   if(nid&&byId[nid])return [byId[nid].x,byId[nid].y];
+  var tid=(end===2)?a.nt2:a.nt1;
+  if(tid){
+    var nb=noteBox(tid);
+    if(nb)return borderPoint(nb, rawPt(a, end===2?1:2));
+  }
   if(zid){
     var b=boxOf(zid);
     if(b)return borderPoint(b, rawPt(a, end===2?1:2));
