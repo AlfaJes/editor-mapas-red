@@ -134,21 +134,43 @@ function renderArmarios(){
       s+='<rect x="'+X0+'" y="'+y+'" width="5" height="'+hh+'" rx="2" fill="'+(ac.col||'#64748b')+'"/>';
       s+='<text x="'+(X0+14)+'" y="'+(y+13)+'" class="cabn">'+escAttr(it.n||ac.n)+'</text>';
       s+='<text x="'+(X0+190)+'" y="'+(y+13)+'" class="cabs">accesorio</text>';
+      s+='<text class="armu" data-hu="'+idx+'" x="'+(X0+W-96)+'" y="'+(y+13)+'" title="Altura ('+(it.u||1)+'U). Clic para cambiarla.">'+(it.u||1)+'U</text>';
       s+='<text class="cabxx" data-del="'+idx+'" x="'+(X0+W-8)+'" y="'+(y+13)+'" text-anchor="end">✕</text>';
       s+='</g>';
     } else if(it.k==='pp'){
-      var ports=parseInt(it.ports)||24;
+      var filas=Math.max(1,Math.min(3,it.u||1));
+      var per=24, total=per*filas;
+      var WPP=W+120;                       // el panel aprovecha el hueco de cables
       s+='<g class="armitem pp" data-idx="'+idx+'" data-pp="1" data-y="'+y+'">';
-      s+='<rect x="'+X0+'" y="'+y+'" width="'+W+'" height="'+hh+'" rx="4" fill="#101c30" stroke="#4b6a8f" stroke-dasharray="5 3"/>';
-      s+='<text x="'+(X0+12)+'" y="'+(y+13)+'" class="cabn">'+escAttr(it.n||('Patch '+ports))+ '</text>';
-      s+='<text x="'+(X0+W-56)+'" y="'+(y+13)+'" class="cabs" text-anchor="end">patch panel</text>';
-      s+='<text class="cabxx" data-del="'+idx+'" x="'+(X0+W-8)+'" y="'+(y+13)+'" text-anchor="end">✕</text>';
-      s+='<text class="cabbulk" data-bulk="'+idx+'" x="'+(X0+W-30)+'" y="'+(y+13)+'" text-anchor="end" title="Enlazar todos los puertos con un switch">⚡</text>';
-      var pw=Math.min(300,(W-120)/ports), sx=X0+120;
-      for(var p=1;p<=ports;p++){
-        var lk=(it.links&&it.links[p])||null;
-        s+='<rect class="armport'+(lk?' on':'')+'" data-pp="'+idx+'" data-p="'+p+'" x="'+(sx+(p-1)*pw).toFixed(1)+'" y="'+(y+hh-8)+'" width="'+Math.max(2,pw-2).toFixed(1)+'" height="6" rx="1"'+
-           '><title>P'+p+(lk?(' → '+lk.dev+' P'+lk.port):' (libre)')+'</title></rect>';
+      // chapa frontal con dos tonos
+      s+='<rect x="'+X0+'" y="'+y+'" width="'+WPP+'" height="'+hh+'" rx="3" fill="#1b2a42" stroke="#5a7699" stroke-width="1.2"/>';
+      s+='<rect x="'+(X0+3)+'" y="'+(y+2)+'" width="'+(WPP-6)+'" height="'+(hh-4)+'" rx="2" fill="#0e1a2b" opacity=".5"/>';
+      // tornillos
+      s+='<circle cx="'+(X0+7)+'" cy="'+(y+hh/2)+'" r="2.2" fill="#8fa8c7" opacity=".8"/>';
+      s+='<circle cx="'+(X0+WPP-7)+'" cy="'+(y+hh/2)+'" r="2.2" fill="#8fa8c7" opacity=".8"/>';
+      // etiqueta y controles
+      s+='<text x="'+(X0+16)+'" y="'+(y+(filas>1?13:hh/2+3.5))+'" class="cabn">'+escAttr(it.n||('Patch '+total+'p'))+'</text>';
+      s+='<text class="armu" data-hu="'+idx+'" x="'+(X0+16)+'" y="'+(y+(filas>1?25:hh/2+3.5))+'" title="Altura de este patch ('+filas+'U). Clic para cambiarla.">'+filas+'U</text>';
+      s+='<text class="cabxx" data-del="'+idx+'" x="'+(X0+WPP-14)+'" y="'+(y+12)+'" text-anchor="end" title="Quitar">✕</text>';
+      s+='<text class="cabbulk" data-bulk="'+idx+'" x="'+(X0+WPP-32)+'" y="'+(y+12)+'" text-anchor="end" title="Enlazar los puertos con el mismo número de un switch">⚡</text>';
+      // 24 puertos RJ45 por U, con separación cada 12
+      var px0=X0+74, pfin=X0+WPP-16;
+      var huecoG=6, pw=(pfin-px0-huecoG)/per;
+      var ph=Math.max(7,(hh-9)/filas-2);
+      for(var r2=0;r2<filas;r2++){
+        for(var c=0;c<per;c++){
+          var p=r2*per+c+1;
+          var lk=(it.links&&it.links[p])||null;
+          var bx2=px0+c*pw+(c>=12?huecoG:0);
+          var by2=y+4+r2*(ph+2);
+          s+='<rect class="armport'+(lk?' on':'')+'" data-pp="'+idx+'" data-p="'+p+'" x="'+bx2.toFixed(1)+'" y="'+by2.toFixed(1)+'" width="'+Math.max(3,pw-1.4).toFixed(1)+'" height="'+ph.toFixed(1)+'" rx="1.2"'+
+             '><title>Puerto '+p+(lk?(' → '+lk.dev+' P'+lk.port):' (libre)')+'</title></rect>';
+          // muesca del conector
+          s+='<rect x="'+(bx2+1).toFixed(1)+'" y="'+(by2+ph*0.62).toFixed(1)+'" width="'+Math.max(1.2,pw-3.4).toFixed(1)+'" height="1.4" fill="#050b14" opacity=".9" pointer-events="none"/>';
+          if(ph>=9 && pw>=11){
+            s+='<text x="'+(bx2+pw/2-0.7).toFixed(1)+'" y="'+(by2+ph-0.8).toFixed(1)+'" class="cabpn" text-anchor="middle">'+(p%2?p:'')+'</text>';
+          }
+        }
       }
       s+='</g>';
     } else {
@@ -178,6 +200,12 @@ function renderArmarios(){
 }
 
 
+function colision(r,it){
+  var occ=rackOcupados(r,it);
+  var top=(it.u0||1)+(it.u||1)-1;
+  for(var u=it.u0||1;u<=top;u++){ if(occ[u])return true; }
+  return false;
+}
 function ajustarU(r,v){
   var occ={}, out=[], fuera=[];
   function marca(it){ var h=it.u||1; for(var k=0;k<h;k++) occ[(it.u0||1)+k]=1; }
@@ -241,6 +269,19 @@ function bindArmarios(){
     r.items.push({k:'pp',n:'Patch '+(r.items.filter(function(x){return x.k==='pp';}).length+1)+' (24)',u0:u0,u:1,ports:24,links:{}});
     save(); renderArmarios();
   };
+  RACK.querySelectorAll('[data-hu]').forEach(function(el){
+    el.onclick=function(ev){
+      ev.stopPropagation();
+      var i2=+el.getAttribute('data-hu'), it=r.items[i2]; if(!it)return;
+      var maxU=it.k==='pp'?3:4;
+      var nu=(it.u||1)+1; if(nu>maxU)nu=1;
+      var viejo=it.u||1; it.u=nu;
+      // comprobar que no choca con lo de arriba
+      var fuera=colision(r,it);
+      if(fuera){ it.u=viejo; alert('No cabe: hay algo justo encima. Mueve ese elemento primero.'); return; }
+      save(); renderArmarios();
+    };
+  });
   var acSel=document.getElementById('armacc');
   if(acSel)acSel.onchange=function(){
     var k=acSel.value; if(!k)return;

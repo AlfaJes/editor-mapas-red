@@ -404,3 +404,10 @@ header{grid-column:1/-1;display:flex;flex-direction:column;gap:0;padding:0;align
 #p_body .prowC span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 #p_body .prowC i{white-space:nowrap;font-size:10.5px;opacity:.85}
 .chips .chip b{color:#e8f1ff}
+
+.armu{fill:#8fb4e6;font-size:9.5px;cursor:pointer;paint-order:stroke;stroke:#0b1524;stroke-width:2px}
+.armu:hover{fill:#cfe0f7}
+.cabpn{fill:#5d7a9e;font-size:8.5px}
+.armport{fill:#1e2f47;stroke:#3d5878;stroke-width:1}
+.armport.on{fill:#255a94;stroke:#6ea8ff}
+.armport:hover{fill:#2f6fae}
