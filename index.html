@@ -2308,20 +2308,35 @@ document.getElementById('bUndo').onclick=undo;
 document.getElementById('bLink').onclick=()=>{
   state.linkMode=!state.linkMode; state.pending=null; setBtn('bLink',state.linkMode); render();};
 document.getElementById('bSave').onclick=()=>{
+  doc.view={k:t.k,x:t.x,y:t.y};
+  doc.zpos=JSON.parse(JSON.stringify(ZBOX));
+  nodes.forEach(function(n){n.nx=n.x;n.ny=n.y;});
   const blob=new Blob([JSON.stringify(doc,null,1)],{type:'application/json'});
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);
   a.download='mapa_red_levante.json';a.click();
   document.getElementById('dirty').textContent='exportado';};
 document.getElementById('bOpen').onclick=()=>document.getElementById('fFile').click();
+function importDoc(d){
+  if(!d||!d.nodes||!Array.isArray(d.nodes))throw new Error('formato');
+  snap();
+  doc=d;
+  doc.zonasExtra=doc.zonasExtra||[]; doc.zpos=doc.zpos||[];
+  doc.notes=doc.notes||[]; doc.arrows=doc.arrows||[]; doc.zparent=doc.zparent||{};
+  save(); rebuild();
+  ZBOX.length=0;
+  var okPos=restoreLayout();
+  if(!okPos)layout();
+  if(d.view&&typeof d.view.k==='number'){ t.k=d.view.k; t.x=d.view.x||0; t.y=d.view.y||0; applyT(); }
+  rebuildUI(); render(); renderList(); showDetail();
+  if(!d.view){ fit(); }
+  var b=document.getElementById('dirty'); if(b)b.textContent='archivo cargado';
+  return true;
+}
 document.getElementById('fFile').onchange=e=>{
   const f=e.target.files[0]; if(!f)return;
   const rd=new FileReader();
-  rd.onload=()=>{ try{
-      const d=JSON.parse(rd.result);
-      if(!d.nodes||!Array.isArray(d.nodes))throw new Error('formato');
-      snap(); doc=d; save(); rebuild(); layout(); rebuildUI(); render(); renderList(); fit(); showDetail();
-      document.getElementById('dirty').textContent='archivo cargado';
-    }catch(err){ alert('Archivo no válido: '+err.message); } };
+  rd.onload=()=>{ try{ importDoc(JSON.parse(rd.result)); }
+    catch(err){ alert('Archivo no válido: '+err.message); } };
   rd.readAsText(f); e.target.value='';};
 document.getElementById('bRelayout').onclick=function(){
   if(!confirm('Se recolocar\u00e1n todos los equipos y zonas en rejilla y perder\u00e1s la distribuci\u00f3n actual. \u00bfContinuar?'))return;
