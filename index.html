@@ -566,7 +566,7 @@ const TYPE={pc:['#4f8cff','PC'],switch:['#a78bfa','Switch'],router:['#f472b6','R
  firewall:['#fb7185','Firewall'],server:['#34d399','Servidor'],nas:['#fbbf24','NAS'],
  wifi:['#22d3ee','Wi-Fi'],nvr:['#e879f9','Grabador'],otro:['#94a3b8','Otro'],
  maquina:['#f59e0b','Máquina'],cnc:['#fb923c','CNC'],plc:['#60a5fa','PLC'],
- impresora:['#cbd5e1','Impresora'],camara:['#f472b6','Cámara'],patch:['#8b9cb3','Patch panel'],ups:['#22c55e','SAI'],vm:['#818cf8','Máquina virtual']};
+ impresora:['#cbd5e1','Impresora'],camara:['#f472b6','Cámara'],ups:['#22c55e','SAI'],vm:['#818cf8','Máquina virtual']};
 const NETCOL={'Oficinas':'#fbbf24','Producción':'#38bdf8','Servidores':'#a78bfa','Otra':'#94a3b8'};
 const KEY='mapared.levante.v1';
 const IDXKEY='nmedit:index';
@@ -2416,6 +2416,11 @@ function rackCabinet(zone){
     return (oa-ob)||a.nombre.localeCompare(b.nombre,'es');
   });
   var rows=[], y=PADT, total=1;
+  var patches=(doc.patches&&doc.patches[zone])?doc.patches[zone]:[];
+  patches.forEach(function(pt,pi){
+    rows.push({pp:true,pi:pi,p:pt,n:{id:'__pp'+pi,nombre:(pt.n||'Patch panel'),tipo:'patch',ip:[]},y:y,h:U-4,u:1});
+    y+=U; total+=1;
+  });
   devs.forEach(function(n){
     var u=rackU(n), h=u*U-4;
     rows.push({n:n,y:y,h:h,u:u});
@@ -2433,6 +2438,22 @@ function rackCabinet(zone){
   // equipos
   rows.forEach(function(r){
     var n=r.n, c=col(n);
+    if(r.pp){
+      var np=Math.min(48,parseInt(r.p&&r.p.ports)||24);
+      s+='<g class="cabrow" data-pp="'+r.pi+'" data-zone="'+escAttr(zone)+'">';
+      s+='<rect x="'+X0+'" y="'+r.y+'" width="'+W+'" height="'+r.h+'" rx="4" fill="#182238" stroke="#33435e" stroke-dasharray="4 3"/>';
+      s+='<rect x="'+X0+'" y="'+r.y+'" width="5" height="'+r.h+'" rx="2" fill="#8b9cb3"/>';
+      var pnm=String(r.p&&r.p.n||'Patch panel');
+      s+='<text x="'+(X0+14)+'" y="'+(r.y+14)+'" class="cabn">'+escAttr(pnm.length>24?pnm.slice(0,23)+'\u2026':pnm)+'</text>';
+      s+='<text x="'+(X0+W-26)+'" y="'+(r.y+14)+'" class="cabs" text-anchor="end">Patch panel</text>';
+      s+='<text class="cabxx" data-pdel="'+r.pi+'" x="'+(X0+W-8)+'" y="'+(r.y+15)+'" text-anchor="end" style="font-size:12px;cursor:pointer;fill:#5d7a9e">\u2715</text>';
+      var stX=X0+24+pnm.length*6.0, usW=Math.max(70,(X0+W-80)-stX), stp=usW/np;
+      for(var q=1;q<=np;q++){
+        s+='<rect x="'+(stX+(q-1)*stp).toFixed(1)+'" y="'+(r.y+r.h-9)+'" width="'+Math.max(1.6,stp-1.2).toFixed(1)+'" height="5" rx="1" fill="'+(q%6===0?'#5b7fae':'#22344f')+'"/>';
+      }
+      s+='</g>';
+      return;
+    }
     s+='<g class="cabrow'+(state.rackSel===n.id?' sel':'')+'" data-id="'+n.id+'" data-y="'+r.y+'" data-zone="'+escAttr(zone)+'" style="cursor:pointer">';
     s+='<rect x="'+X0+'" y="'+r.y+'" width="'+W+'" height="'+r.h+'" rx="4" fill="#132239" stroke="#2b4368"/>';
     s+='<rect x="'+X0+'" y="'+r.y+'" width="5" height="'+r.h+'" rx="2" fill="'+c+'"/>';
@@ -2498,6 +2519,7 @@ function renderRack(){
     (mode==='armario'?('<select id="rkz" class="rkz">'+zs.map(function(z){
         return '<option value="'+escAttr(z)+'"'+(z===cur?' selected':'')+'>'+escAttr(z)+'</option>';}).join('')+
       '<option value="*"'+(cur==='*'?' selected':'')+'>— todos los armarios —</option></select>'+
+      '<button class="btn sm" id="rkpatch" title="Añadir un patch panel a este armario">\uFF0B Patch</button>'+
       '<button class="btn sm tog'+(state.rackOnly?' on':'')+'" id="rkonly" title="Mostrar solo equipos de armario (switch, router, servidor…)">Solo armario</button>'+
       '<span class="rkleg"><i style="background:#4f8cff"></i>ocupado <i style="background:#22344f"></i>libre</span>'+
       ((doc.rackHidden&&doc.rackHidden.length)?'<button class="btn sm" id="rkrest">Restaurar '+doc.rackHidden.length+'</button>':'')+
@@ -2511,8 +2533,22 @@ function renderRack(){
   var zz=document.getElementById('rkz');
   if(zz)zz.onchange=function(){ state.rackZone=zz.value; renderRack(); };
   RACK.querySelectorAll('.cabrow').forEach(function(g){
-    g.onclick=function(){ var id=g.getAttribute('data-id'); if(state.rackSel!==id){ state.rackSel=id; renderRack(); } };
+    g.onclick=function(){ var id=g.getAttribute('data-id'); if(!id)return; if(state.rackSel!==id){ state.rackSel=id; renderRack(); } };
     g.ondblclick=function(){ var id=g.getAttribute('data-id'); gotoMapa(id); };
+  });
+  var rp=document.getElementById('rkpatch'); if(rp)rp.onclick=function(){
+    var z=state.rackZone&&state.rackZone!=='*'?state.rackZone:(rackZonas()[0]||'');
+    if(!z)return;
+    doc.patches=doc.patches||{}; doc.patches[z]=doc.patches[z]||[];
+    doc.patches[z].push({n:'Patch '+(doc.patches[z].length+1)+' (24)',ports:24});
+    save(); renderRack();
+  };
+  RACK.querySelectorAll('[data-pdel]').forEach(function(x){
+    x.onclick=function(ev){ ev.stopPropagation();
+      var z=x.closest('[data-zone]')?x.closest('[data-zone]').getAttribute('data-zone'):state.rackZone;
+      var i=parseInt(x.getAttribute('data-pdel'),10);
+      if(doc.patches&&doc.patches[z]){ doc.patches[z].splice(i,1); save(); renderRack(); }
+    };
   });
   var ro=document.getElementById('rkonly'); if(ro)ro.onclick=function(){ state.rackOnly=!state.rackOnly; try{localStorage.setItem('nm_rackonly',state.rackOnly?'1':'0');}catch(e){} renderRack(); };
   var rr=document.getElementById('rkrest'); if(rr)rr.onclick=function(){ doc.rackHidden=[]; save(); renderRack(); };
