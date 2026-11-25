@@ -398,6 +398,7 @@ header{grid-column:1/-1;display:flex;flex-direction:column;gap:0;padding:0;align
 .nicl b{font-size:11px;color:#cfe1ff}
 .nicl span{font-size:10px;color:#8ba0bd}
 #dirty:empty{display:none}
+.epin{stroke:#0a1120;stroke-width:1.8;pointer-events:none}
 #gPing{pointer-events:none}
 #p_body .prowC b{white-space:nowrap;font-size:10.5px}
 #p_body .prowC span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -1120,6 +1121,7 @@ function edgeD(a,b,e){
   var v2x=b.x-fromP[0], v2y=b.y-fromP[1], l2=Math.sqrt(v2x*v2x+v2y*v2y)||1;
   var AX=a.x+v1x/l1*R, AY=a.y+v1y/l1*R;
   var BX=b.x-v2x/l2*R, BY=b.y-v2y/l2*R;
+  if(e)e._ends=[AX,AY,BX,BY];
   if(P.length){
     if(st==='recto'){
       var d1='M'+AX.toFixed(1)+','+AY.toFixed(1); P.forEach(function(q){d1+=' L'+q[0]+','+q[1];});
@@ -1187,8 +1189,13 @@ function render(){
     const hl=isSel||(state.sel&&(state.sel===e.s||state.sel===e.t));
     const d=edgeD(a,b,e);
     const onP=state.path&&inPath(e.s,e.t);
+    var EN=e._ends||[a.x,a.y,b.x,b.y];
+    var pinCol=e.color||'#6ea8ff';
     return `<path class="edge${hl?' hl':''}${e.hide?' hid':''}${onP?' on':''}" d="${d}"${e.color?` style="stroke:${e.color}"`:''}/>
-      <path class="edge-hit" data-e="${e.s}|${e.t}" d="${d}"/>${elabBox(e)}`;}).join(''):'')
+      <path class="edge-hit" data-e="${e.s}|${e.t}" d="${d}"/>`+
+      (e.hide?'':`<circle class="epin" cx="${EN[0].toFixed(1)}" cy="${EN[1].toFixed(1)}" r="5.2" style="fill:${pinCol}"/>`+
+        `<circle class="epin" cx="${EN[2].toFixed(1)}" cy="${EN[3].toFixed(1)}" r="5.2" style="fill:${pinCol}"/>`)+
+      elabBox(e);}).join(''):'')
     ;
   GX.innerHTML=(state.esel?(()=>{const e=doc.edges.find(x=>(x.s===state.esel.s&&x.t===state.esel.t)||(x.s===state.esel.t&&x.t===state.esel.s));
       if(!e)return'';
