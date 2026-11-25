@@ -2826,13 +2826,16 @@ document.getElementById('bGrid').onclick=function(){
   else { render(); }
 };
 document.getElementById('bSide').onclick=function(){
-  var on=!document.body.classList.contains('noside');
-  document.body.classList.toggle('noside',on);
-  setBtn('bSide',on);
-  try{ localStorage.setItem('nm_side',on?'1':'0'); }catch(e){}
+  var hide=!document.body.classList.contains('noside');
+  document.body.classList.toggle('noside',hide);
+  setBtn('bSide',!hide);
+  try{ localStorage.setItem('nm_side',hide?'1':'0'); }catch(e){}
   setTimeout(function(){ fit(); },40);
 };
-try{ if(localStorage.getItem('nm_side')==='1'){ document.body.classList.add('noside'); setBtn('bSide',true); } }catch(e){}
+try{
+  if(localStorage.getItem('nm_side')==='1'){ document.body.classList.add('noside'); setBtn('bSide',false); }
+  else { setBtn('bSide',true); }
+}catch(e){}
 
 document.getElementById('bPdf').onclick=function(){var m=document.getElementById('moreMenu');if(m)m.classList.remove('on');exportPDF();};
 document.getElementById('fColor').onchange=function(e){ state.colorBy=e.target.value; render(); renderList(); };
