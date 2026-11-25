@@ -1,0 +1,26 @@
+{
+  "name": "editor-mapas-red",
+  "version": "1.0.0",
+  "description": "Editor de mapas de red en un único archivo HTML, sin dependencias ni instalación. Funciona en cualquier navegador y guarda los proyectos **en el propio navegador**.",
+  "main": "index.js",
+  "scripts": {
+    "build": "node build.mjs",
+    "build:public": "node build.mjs --public",
+    "build:all": "node build.mjs && node build.mjs --public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/AlfaJes/editor-mapas-red.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/AlfaJes/editor-mapas-red/issues"
+  },
+  "homepage": "https://github.com/AlfaJes/editor-mapas-red#readme",
+  "devDependencies": {
+    "esbuild": "^0.24.0"
+  },
+  "private": true
+}

@@ -36,3 +36,24 @@ Abre `index.html` en el navegador. Para que el guardado automático funcione de 
 ```bash
 python3 -m http.server 8099
 ```
+
+## Desarrollo
+
+El editor se construye desde `src/` y el resultado es **un único HTML** autosuficiente.
+
+```
+src/template.html   estructura (head, cuerpo, diálogos)
+src/styles.css      estilos
+src/parts/*.js      código, por áreas (base, modelo, layout, render, interacción, UI, rack, zonas, ruta/export, init)
+src/data.json       mapa real (NO se publica; está en .gitignore)
+build.mjs           empaqueta y minifica en un solo archivo
+```
+
+```bash
+npm install
+npm run build          # dist/mapa.html   (privado, con tus datos)
+npm run build:public   # dist/publico.html (vacío, para publicar)
+npm run build:all
+```
+
+Para desplegar: `dist/publico.html` → `index.html` del repo (GitHub Pages) y del servidor local.

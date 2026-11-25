@@ -1,0 +1,182 @@
+<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Mapa de Red · Delegación de Levante</title><style>/*__CSS__*/</style></head><body><div class="app"><header>
+  <div class="hrow hrow1">
+    <div class="hbrand">
+      <h1 id="ttl" contenteditable="true" spellcheck="false" title="Clic para editar el título">MAPA DE RED · DELEGACIÓN DE LEVANTE</h1>
+      <div class="sub" id="sub" contenteditable="true" spellcheck="false" title="Clic para editar el subtítulo">Centro productivo de Levante · Control Glass A&amp;S · editor interactivo</div>
+    </div>
+    <div class="chips">
+      <span class="chip"><b id="total">0</b> equipos</span>
+      <span class="chip"><b id="nEdges">0</b> enlaces</span>
+      <span class="chip"><b id="nZonas">0</b> secciones</span>
+      <span class="chip" id="dirty"></span>
+    </div>
+    <div class="hact">
+      <button class="btn pri" id="bEdit" title="Activar o desactivar el modo edición">✎ Editar</button>
+      <button class="btn" id="bAdd" style="display:none" title="Añadir un equipo">＋ Equipo</button>
+      <button class="btn" id="bNote" style="display:none" title="Añadir un cajón de texto">＋ Texto</button>
+      <button class="btn" id="bArrow" style="display:none" title="Añadir una flecha">↗ Flecha</button>
+      <button class="btn" id="bLink" style="display:none" title="Conectar dos equipos">⇄ Conectar</button>
+      <button class="btn" id="bUndo" style="display:none" title="Deshacer (Ctrl+Z)">↶ Deshacer</button>
+      <span class="gsep"></span>
+      <button class="btn" id="bFit" title="Encajar todo el mapa en la pantalla">⤢ Encajar</button>
+      <button class="btn" id="bPres" title="Ver a pantalla completa">🖥 Presentar</button>
+      <button class="btn icon" id="bMore" title="Más acciones: exportar, importar, reordenar…">⋯</button>
+      <div class="menu" id="moreMenu">
+        <button class="btn" id="bSave">Exportar JSON</button>
+        <button class="btn" id="bOpen">Abrir JSON</button>
+        <button class="btn" id="bPng">Imagen PNG</button>
+        <button class="btn" id="bPdf">PDF (A4 horizontal)</button>
+        <button class="btn on" id="bApp">💾 Guardar copia actualizada (HTML)</button>
+      <button class="btn" id="bCsv">Inventario CSV</button>
+        <button class="btn" id="bRelayout">Reordenar por rejilla</button>
+        <button class="btn danger" id="bReset">Restaurar plantilla</button>
+      </div>
+    </div>
+  </div>
+  <div class="hrow hrow2">
+    <span class="glabel">Mostrar</span>
+    <button class="btn sm tog on" id="bIp">IPs</button>
+    <button class="btn sm tog on" id="bLabels">Etiquetas</button>
+    <button class="btn sm tog on" id="bEdges">Cables</button>
+    <button class="btn sm tog on" id="bHull">Cajas</button>
+    <button class="btn sm tog on" id="bGrid">Rejilla</button>
+    <button class="btn sm tog" id="bLock" title="Bloquea la posición de las secciones: al arrastrarlas se desplaza el mapa">🔒 Fijar secciones</button>
+    <button class="btn sm" id="bEdge" title="Forma de los cables">Curvo</button>
+    <span class="gsep"></span>
+    <span class="glabel">Paneles</span>
+    <button class="btn sm tog" id="bSide" title="Ocultar o mostrar la lista de equipos">◧ Equipos</button>
+    <button class="btn sm" id="bRack" title="Vista de rack por puertos">🗄 Rack</button>
+    <button class="btn sm" id="bZonas" title="Crear, renombrar y borrar secciones">🗂 Secciones</button>
+    <button class="btn sm" id="bNets2" title="Crear redes y elegir sus colores">🌐 Redes</button>
+    <button class="btn sm" id="bPath" title="Calcular ruta entre dos equipos">🧭 Ruta</button>
+    <button class="btn sm" id="bCheck" title="Avisos de configuración">⚠ Revisión</button>
+    <button class="btn sm" id="bPing" title="Comprobar si todos los equipos se ven entre sí">🩺 Ping</button>
+    <button class="btn sm" id="bProj" title="Proyectos guardados">📁 Proyectos</button>
+  </div>
+  <input type="color" id="cpick" style="position:fixed;left:-100px;top:-100px">
+  <input type="file" id="fFile" accept=".json,application/json" style="display:none">
+</header>
+<aside>
+  <div class="search"><input id="q" type="search" placeholder="Buscar equipo, IP, MAC, modelo…" autocomplete="off"></div>
+  <div class="filters"><div class="frow" id="fTypes"></div>
+    <select id="fZona"></select><select id="fRed"></select></div>
+  <div class="netchips" id="fNets"></div>
+  <div class="colorby"><label for="fColor">Color por</label>
+    <select id="fColor"><option value="tipo">Tipo de equipo</option><option value="red">Red</option>
+    <option value="zona">Zona</option><option value="vlan">VLAN</option></select></div>
+  <div class="list" id="list"></div>
+</aside>
+<main>
+  <svg id="map" xmlns="http://www.w3.org/2000/svg"><defs><pattern id="gridp" width="12" height="12" patternUnits="userSpaceOnUse"><path d="M12 0H0V12" fill="none" stroke="#182740" stroke-width="1"/></pattern></defs><g id="world"><rect id="gridrect" x="-3000" y="-3000" width="12000" height="9000" fill="url(#gridp)" style="display:none"/>
+    <g id="gHulls"></g><g id="gEdges"></g><g id="gNodes"></g><g id="gLabels"></g><g id="gELab"></g><g id="gArrows"></g><g id="gNotes"></g><g id="gHandles"></g><rect id="selbox" x="0" y="0" width="0" height="0" fill="rgba(79,140,255,.12)" stroke="#4f8cff" stroke-dasharray="5 4" stroke-width="1.2" style="display:none;pointer-events:none"/></g></svg>
+  <div class="legend" id="legend"></div>
+  <div id="rack"></div>
+  <footer>Arrastra para mover · rueda para zoom · clic en equipo para ver/editar · <b>Shift+arrastrar</b> selecciona varios · borde = red · Ctrl+Z deshace</footer>
+</main>
+<div id="pmodal" class="modal"><div class="mbox" style="width:780px;max-height:84vh">
+  <h3>Comprobación de conectividad</h3>
+  <div id="p_sum" style="font-size:12px;color:#9db2d0;line-height:1.6;margin:6px 0 10px"></div>
+  <div id="p_body" style="overflow:auto;max-height:54vh;border-top:1px solid #22314b;border-bottom:1px solid #22314b;padding:8px 0"></div>
+  <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px">
+    <button class="btn" id="p_heat">Fallos en el mapa</button>
+    <button class="btn" id="p_anim">Animar pares</button>
+    <button class="btn" id="p_stop">Parar</button>
+    <button class="btn" id="p_run">Probar todo</button>
+    <button class="btn on" id="p_close">Cerrar</button>
+  </div>
+</div></div>
+<div id="nmodal" class="modal"><div class="mbox" style="width:440px">
+  <h3>Cajón de texto</h3>
+  <textarea id="n_text" placeholder="Escribe el texto que quieras anotar en el mapa…" style="width:100%;min-height:110px;background:#0c1626;border:1px solid #26374f;border-radius:8px;color:#dbe9ff;padding:8px;font:12px/1.45 system-ui"></textarea>
+  <div style="display:flex;gap:12px;margin-top:12px;align-items:end">
+    <label style="font-size:10px;color:#7d93b3">Tamaño<br><input id="n_sz" type="number" min="8" max="30" value="13" style="width:64px"></label>
+    <label style="font-size:10px;color:#7d93b3">Ancho<br><input id="n_w" type="number" min="40" max="600" step="10" value="220" style="width:74px"></label>
+    <label style="font-size:10px;color:#7d93b3">Color<br><input id="n_col" type="color" value="#8fc7ff" style="width:46px;height:26px;padding:0"></label>
+    <label style="font-size:10px;color:#7d93b3">Sección<br><select id="n_zone" style="max-width:150px"><option value="">— suelto —</option></select></label>
+    <label style="font-size:10px;color:#7d93b3" id="n_style_wrap">Estilo<br><select id="n_style"><option value="line">Línea con punta</option><option value="dash">Discontinua</option><option value="dotted">Punteada</option><option value="double">Doble punta</option><option value="block">Bloque</option></select></label>
+  </div>
+  <div class="hintbox" style="margin-top:10px">Puedes cambiar el tama\u00f1o arrastrando la esquina inferior derecha del caj\u00f3n en el mapa.</div>
+  <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px">
+    <button class="btn danger" id="n_del">Eliminar</button>
+    <button class="btn" id="n_cancel">Cancelar</button>
+    <button class="btn on" id="n_ok">Guardar</button>
+  </div>
+</div></div>
+<div id="pmodal" class="modal"><div class="mbox" style="width:560px">
+  <h3>Proyectos</h3>
+  <div class="hintbox">Cada proyecto se guarda solo en este navegador. Con «Descargar HTML» te llevas el mapa completo con el editor dentro, para abrirlo donde quieras.</div>
+  <div style="display:flex;gap:8px;margin:12px 0 10px">
+    <button class="btn on" id="p_new">＋ Proyecto vacío</button>
+    <button class="btn" id="p_dup">Duplicar actual</button>
+    <button class="btn" id="p_imp">Importar JSON</button>
+  </div>
+  <div class="plist2" id="p_list"></div>
+  <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px">
+    <button class="btn" id="p_html">Descargar HTML</button>
+    <button class="btn" id="p_json">Descargar JSON</button>
+    <button class="btn" id="p_close">Cerrar</button>
+  </div>
+</div></div>
+<div id="cmodal" class="modal"><div class="mbox">
+  <h3>Revisión del inventario</h3>
+  <div class="hintbox">Todo lo que aparece aquí es un dato que falta o que se contradice. Pulsa una línea para ir al equipo.</div>
+  <div id="clist" style="max-height:56vh;overflow:auto;margin-top:10px"></div>
+  <div class="macts"><button class="btn" id="c_close">Cerrar</button></div>
+</div></div>
+<div id="rnm" class="modal"><div class="mbox" style="width:580px">
+  <h3>Redes y colores</h3>
+  <div class="hintbox">Cada red se reconoce por cómo empieza la IP (por ejemplo <b>192.168.41.</b>). El color se usa en la leyenda, en los chips de filtro y en «Color por: Red».</div>
+  <div style="display:grid;grid-template-columns:1fr 130px 46px 34px;gap:8px;margin-top:10px;font-size:10px;color:#7d93b3;letter-spacing:.06em;text-transform:uppercase"><span>Red</span><span>Empieza por</span><span>Color</span><span></span></div>
+  <div id="rnlist" style="max-height:40vh;overflow:auto;margin-top:4px"></div>
+  <div style="display:flex;gap:6px;margin-top:10px;align-items:center;flex-wrap:wrap">
+    <input id="rnname" placeholder="Nombre (Almacén)" style="flex:1;min-width:120px">
+    <input id="rnpre" placeholder="192.168.50." style="width:120px">
+    <input type="color" id="rncol" value="#f472b6" style="width:44px;height:28px;padding:0">
+    <button class="btn on" id="rnadd">＋ Añadir</button>
+  </div>
+  <div style="margin-top:16px;font-size:10px;color:#7d93b3;letter-spacing:.06em;text-transform:uppercase">Categorías de cable</div>
+  <div id="rncat" style="max-height:26vh;overflow:auto;margin-top:4px"></div>
+  <div style="display:flex;gap:6px;margin-top:8px;align-items:center;flex-wrap:wrap">
+    <input id="cnname" placeholder="Nombre (Fibra, Cobre…)" style="flex:1;min-width:130px">
+    <input type="color" id="cncol" value="#22d3ee" style="width:44px;height:26px;padding:0;border:none;background:none">
+    <button class="btn on" id="cnadd">＋ Añadir categoría</button>
+  </div>
+  <div class="macts"><button class="btn" id="rnclose">Cerrar</button></div>
+</div></div>
+<div id="zmodal" class="modal"><div class="mbox">
+  <h3>Zonas y secciones</h3>
+  <div class="hintbox">Elige qué zona contiene a otra: al arrastrar la zona padre se moverán también las hijas, manteniendo su posición relativa.</div>
+  <div style="display:flex;gap:6px;margin-top:10px">
+    <input id="znueva" placeholder="Nombre de la nueva zona (p. ej. NAVE 4)"
+      style="flex:1;background:#0c1626;border:1px solid #26374f;border-radius:7px;color:#dbe9ff;
+      font:inherit;font-size:12px;padding:6px 8px">
+    <button class="btn on" id="zadd">＋ Crear</button>
+  </div>
+  <div id="zlist" style="max-height:50vh;overflow:auto;margin-top:10px"></div>
+  <div class="macts"><button class="btn" id="z_close">Cerrar</button></div>
+</div></div>
+<div id="modal" class="modal"><div class="mbox">
+  <h3>Nuevo equipo</h3>
+  <div class="mrow">
+    <div class="mf wide"><label>Nombre</label><input id="m_nombre" placeholder="PC-nuevo"></div>
+    <div class="mf"><label>Tipo</label><select id="m_tipo"></select></div>
+    <div class="mf"><label>Zona</label><select id="m_zona"></select>
+     <input id="m_znueva" placeholder="Nombre de la zona nueva" style="display:none;margin-top:6px"></div>
+    <div class="mf wide"><label>Direcciones IP (una por línea)</label><textarea id="m_ip" placeholder="192.168.4.50"></textarea></div>
+    <div class="mf"><label>MAC</label><input id="m_mac" placeholder="AA:BB:CC:DD:EE:FF"></div>
+    <div class="mf"><label>Modelo</label><input id="m_modelo"></div>
+    <div class="mf"><label>Ubicación</label><input id="m_ubic"></div>
+    <div class="mf wide"><div id="m_extra" class="mfields"></div></div>
+    <div class="mf wide"><label>Adaptadores de red (físicos y virtuales)</label>
+      <div class="nics" id="m_nics"></div>
+      <button type="button" class="btn mini" id="m_nicadd">＋ Añadir adaptador</button></div>
+    <div class="mf wide"><label>Notas</label><textarea id="m_notas" rows="2"></textarea></div>
+  </div>
+  <div class="mact"><button class="btn" id="m_cancel">Cancelar</button>
+  <button class="btn on" id="m_ok">Crear equipo</button></div>
+</div></div>
+
+<div class="detail" id="detail"></div><div class="tip" id="tip"></div></div>
+<div id="presbar" class="presbar"><span id="presname">Mapa de red</span> · pulsa Esc o aquí para salir</div>
+<script id="seed-data" type="application/json">{}</script>
+<script>//__JS__</script></body></html>

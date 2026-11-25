@@ -1,0 +1,4 @@
+node_modules/
+dist/
+# datos reales del mapa (IPs y MACs): no se publican
+src/data.json
