@@ -163,6 +163,10 @@ function rackCabinet(zone){
 function renderRack(){
   if(!RACK)return;
   var mode=state.rackMode||'lista';
+  if(mode==='armario'){ renderArmarios(); return; }
+
+  if(!RACK)return;
+  var mode=state.rackMode||'lista';
   var zs=rackZonas();
   var cur=(state.rackZone==='*')?'*':(state.rackZone&&zs.indexOf(state.rackZone)>=0?state.rackZone:(zs.filter(function(z){return /rack|armario/i.test(z);})[0]||zs[0]||''));
   state.rackZone=cur;
