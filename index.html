@@ -1039,7 +1039,13 @@ function borrarPuntosRedundantes(){
 }
 function segMid(anch,i,hasPts,e){
   var p1=anch[i], p2=anch[i+1], st=doc.estyle||'curvo';
-  if(st==='orto')return {x:p2[0], y:p1[1]};
+  if(st==='orto'){
+    if(!hasPts){
+      if(e&&typeof e.bx==='number')return {x:e.bx, y:p1[1]};
+      return {x:(p1[0]+p2[0])/2, y:p1[1]};
+    }
+    return {x:p2[0], y:p1[1]};
+  }
   if(st==='recto')return {x:(p1[0]+p2[0])/2, y:(p1[1]+p2[1])/2};
   if(!hasPts){
     var cx,cy;
@@ -1137,6 +1143,24 @@ function render(){
         out+=`<circle class="ehadd" data-e="${e.s}|${e.t}" data-mi="${i}" cx="${m.x.toFixed(1)}" cy="${m.y.toFixed(1)}" r="4.5"/>`;
       }
       return out;})():'');
+  (function ajustarAsas(){
+    var asas=G.querySelectorAll('.ehadd,.eh');
+    for(var i=0;i<asas.length;i++){
+      var c=asas[i], key=c.getAttribute('data-e');
+      if(!key)continue;
+      var hit=G.querySelector('path.edge-hit[data-e="'+key+'"]');
+      if(!hit)continue;
+      var L=hit.getTotalLength(); if(!L)continue;
+      var cx=parseFloat(c.getAttribute('cx')), cy=parseFloat(c.getAttribute('cy'));
+      var best=1e12, bx=cx, by=cy, paso=Math.max(1,L/240);
+      for(var t=0;t<=L;t+=paso){
+        var pp=hit.getPointAtLength(t);
+        var dx=pp.x-cx, dy=pp.y-cy, d=dx*dx+dy*dy;
+        if(d<best){ best=d; bx=pp.x; by=pp.y; if(best<0.04)break; }
+      }
+      c.setAttribute('cx',bx.toFixed(1)); c.setAttribute('cy',by.toFixed(1));
+    }
+  })();
   GN.innerHTML=shown.map(n=>{
     const cls=['node']; if(state.sel===n.id)cls.push('sel');
     if(DUPS.has(n.id))cls.push('dup');
