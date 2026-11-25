@@ -380,6 +380,11 @@ header{grid-column:1/-1;display:flex;flex-direction:column;gap:0;padding:0;align
 .cabs{fill:#7d93b3;font-size:10px}
 .cabi{fill:#8296b3;font-size:10px}
 .cabrow:hover rect{stroke:#4f8cff}
+.lockz .hull,.lockz .hull-l,.lockz .hull-pill{cursor:default}
+.lockz .zh{opacity:.15}
+.cabttl{font-size:12px;font-weight:700;color:#9fc0ea;letter-spacing:.06em;text-transform:uppercase;margin:14px 0 6px}
+.cabrow.sel rect:first-child{stroke:#4f8cff;stroke-width:2}
+.rkord{display:flex;gap:6px;margin-left:8px}
 #dirty:empty{display:none}
 #gPing{pointer-events:none}
 #p_body .prowC b{white-space:nowrap;font-size:10.5px}
@@ -428,6 +433,7 @@ header{grid-column:1/-1;display:flex;flex-direction:column;gap:0;padding:0;align
     <button class="btn sm tog on" id="bEdges">Cables</button>
     <button class="btn sm tog on" id="bHull">Cajas</button>
     <button class="btn sm tog on" id="bGrid">Rejilla</button>
+    <button class="btn sm tog" id="bLock" title="Bloquea la posición de las secciones: al arrastrarlas se desplaza el mapa">🔒 Fijar secciones</button>
     <button class="btn sm" id="bEdge" title="Forma de los cables">Curvo</button>
     <span class="gsep"></span>
     <span class="glabel">Paneles</span>
@@ -555,7 +561,7 @@ const FRESH=JSON.parse(JSON.stringify(DATA));
 let doc, nodes=[], edges=[], byId={}, adj={}, zonas=[], hist=[];
 const state={editing:null,q:'',types:new Set(Object.keys(TYPE)),zona:'',red:'',labels:true,edges:true,hulls:true,showIp:true,
   sel:null,edit:false,linkMode:false,pending:null,view:'mapa',msel:new Set(),
-  nets:new Set(),colorBy:'tipo',grid:true,snap:true,path:null,pathA:null,pathMode:false,elab:true};
+  nets:new Set(),colorBy:'tipo',grid:true,snap:true,path:null,pathA:null,pathMode:false,elab:true,lockZones:false};
 
 // ---------- modelo ----------
 function computeNets(n){
@@ -1941,6 +1947,7 @@ svg.addEventListener('mousedown',e=>{
   }
   const zd=e.target.dataset&&e.target.dataset.zona;
   if(zd&&e.target.classList.contains('zh')){
+    if(state.lockZones){ pan={x:e.clientX,y:e.clientY,tx:t.x,ty:t.y}; svg.classList.add('pan'); return; }
     const box=ZBOX.find(b=>b.z===zd);
     zres={z:zd,sx:e.clientX,sy:e.clientY,w0:box?box.w:220,h0:box?box.h:130};
     svg.classList.add('pan'); return;
@@ -1979,6 +1986,7 @@ svg.addEventListener('mousedown',e=>{
     return;}
   const isHull=zd&&(e.target.classList.contains('hull')||e.target.classList.contains('hull-l')||e.target.classList.contains('hull-pill'));
   if(isHull){
+    if(state.lockZones){ pan={x:e.clientX,y:e.clientY,tx:t.x,ty:t.y}; svg.classList.add('pan'); return; }
     const zs=[zd].concat(descZonas(zd));
     zdrag={z:zd,sx:e.clientX,sy:e.clientY,moved:false,
       boxes:zs.map(z=>{const b=ZBOX.find(x=>x.z===z);return b?{b,x:b.x,y:b.y}:null;}).filter(Boolean),
@@ -2258,17 +2266,55 @@ function rackZonas(){
   nodes.forEach(function(n){ if(n.zona){ zs[n.zona]=(zs[n.zona]||0)+1; } });
   return Object.keys(zs).sort(function(a,b){return a.localeCompare(b,'es');});
 }
+function rackZonasBool(){ return rackZonas(); }
 function rackU(n){
   var t=n.tipo;
   if(t==='servidor'||t==='nas')return 2;
   if(t==='ups')return 3;
   return 1;
 }
+function gotoMapa(id){
+  state.view='mapa'; document.body.classList.remove('viewrack');
+  var b=document.getElementById('bRack'); if(b){ b.classList.remove('on'); b.textContent='\ud83d\uddc4 Rack'; }
+  render(); select(id,true);
+}
+function rackIdsDom(z){
+  var out=[];
+  RACK.querySelectorAll('.cabrow').forEach(function(g){
+    if(g.getAttribute('data-zone')===z) out.push(g.getAttribute('data-id'));
+  });
+  return out;
+}
+function rackMove(dir){
+  var id=state.rackSel; if(!id)return;
+  var n=byId[id]; if(!n)return;
+  var z=n.zona||'';
+  var ids=rackIdsDom(z);
+  var i=ids.indexOf(id); if(i<0)return;
+  var j=i+dir; if(j<0||j>=ids.length)return;
+  ids.splice(i,1); ids.splice(j,0,id);
+  doc.rackOrder=doc.rackOrder||{}; doc.rackOrder[z]=ids;
+  save(); renderRack();
+}
+function rackOrderOf(z){
+  var arr=(doc.rackOrder&&doc.rackOrder[z])?doc.rackOrder[z]:[];
+  return Array.isArray(arr)?arr:[];
+}
 function rackCabinet(zone){
+  if(zone==='*'){
+    var zs=rackZonasBool();
+    return zs.map(function(z){ return '<div class="cabttl">'+escAttr(z)+'</div>'+rackCabinet(z); }).join('')
+      ||'<div class="empty">No hay armarios con equipos</div>';
+  }
   var U=22, X0=64, W=430, PADT=26;
   var devs=nodes.filter(function(n){return n.zona===zone;});
   var ord={patch:0,switch:1,router:2,firewall:3,ups:4,servidor:5,nas:6,nvr:7,wifi:8,pc:9};
+  var manual=rackOrderOf(zone);
   devs.sort(function(a,b){
+    var ia=manual.indexOf(a.id), ib=manual.indexOf(b.id);
+    if(ia>=0||ib>=0){
+      if(ia<0)return 1; if(ib<0)return -1; return ia-ib;
+    }
     var oa=ord[a.tipo]===undefined?9:ord[a.tipo], ob=ord[b.tipo]===undefined?9:ord[b.tipo];
     return (oa-ob)||a.nombre.localeCompare(b.nombre,'es');
   });
@@ -2290,7 +2336,7 @@ function rackCabinet(zone){
   // equipos
   rows.forEach(function(r){
     var n=r.n, c=col(n);
-    s+='<g class="cabrow" data-id="'+n.id+'" style="cursor:pointer">';
+    s+='<g class="cabrow'+(state.rackSel===n.id?' sel':'')+'" data-id="'+n.id+'" data-y="'+r.y+'" data-zone="'+escAttr(zone)+'" style="cursor:pointer">';
     s+='<rect x="'+X0+'" y="'+r.y+'" width="'+W+'" height="'+r.h+'" rx="4" fill="#132239" stroke="#2b4368"/>';
     s+='<rect x="'+X0+'" y="'+r.y+'" width="5" height="'+r.h+'" rx="2" fill="'+c+'"/>';
     var nm=String(n.nombre||'');
@@ -2344,26 +2390,33 @@ function renderRack(){
   if(!RACK)return;
   var mode=state.rackMode||'lista';
   var zs=rackZonas();
-  var cur=state.rackZone&&zs.indexOf(state.rackZone)>=0?state.rackZone:(zs.filter(function(z){return /rack|armario/i.test(z);})[0]||zs[0]||'');
+  var cur=(state.rackZone==='*')?'*':(state.rackZone&&zs.indexOf(state.rackZone)>=0?state.rackZone:(zs.filter(function(z){return /rack|armario/i.test(z);})[0]||zs[0]||''));
   state.rackZone=cur;
-  var head='<div class="rkbar"><span class="rkttl">\ud83d\uddff Armario</span>'+
+  var head='<div class="rkbar"><span class="rkttl">\ud83d\uddc4 Armario</span>'+
     '<div class="rkseg">'+
       '<button class="btn sm'+(mode==='lista'?' on':'')+'" data-rm="lista">\u2630 Lista</button>'+
       '<button class="btn sm'+(mode==='armario'?' on':'')+'" data-rm="armario">\ud83d\uddbc Armario</button>'+
     '</div>'+
     (mode==='armario'?('<select id="rkz" class="rkz">'+zs.map(function(z){
         return '<option value="'+escAttr(z)+'"'+(z===cur?' selected':'')+'>'+escAttr(z)+'</option>';}).join('')+
-      '</select><span class="rkleg"><i style="background:#4f8cff"></i>ocupado <i style="background:#22344f"></i>libre</span>'):'')+
+      '<option value="*"'+(cur==='*'?' selected':'')+'>— todos los armarios —</option></select>'+
+      '<span class="rkleg"><i style="background:#4f8cff"></i>ocupado <i style="background:#22344f"></i>libre</span>'+
+      (state.rackSel?'<span class="rkord"><button class="btn sm" id="rkup" title="Subir un puesto">\u25b2 Subir</button><button class="btn sm" id="rkdn" title="Bajar un puesto">\u25bc Bajar</button><button class="btn sm" id="rkgoto">Ver en el mapa</button></span>':'')):'' )+
     '</div>';
   RACK.innerHTML=head+(mode==='armario'?('<div class="cabwrap">'+rackCabinet(cur)+'</div>'):rackLista());
   RACK.querySelectorAll('[data-rm]').forEach(function(b){
     b.onclick=function(){ state.rackMode=b.getAttribute('data-rm'); renderRack(); };
   });
+  if(mode!=='armario') rackBind();
   var zz=document.getElementById('rkz');
   if(zz)zz.onchange=function(){ state.rackZone=zz.value; renderRack(); };
   RACK.querySelectorAll('.cabrow').forEach(function(g){
-    g.onclick=function(){ var id=g.getAttribute('data-id'); state.view='mapa'; document.body.classList.remove('viewrack'); document.getElementById('bRack').classList.remove('on'); document.getElementById('bRack').textContent='\ud83d\uddff Rack'; render(); select(id,true); };
+    g.onclick=function(){ var id=g.getAttribute('data-id'); if(state.rackSel!==id){ state.rackSel=id; renderRack(); } };
+    g.ondblclick=function(){ var id=g.getAttribute('data-id'); gotoMapa(id); };
   });
+  var bu=document.getElementById('rkup'); if(bu)bu.onclick=function(){ rackMove(-1); };
+  var bd=document.getElementById('rkdn'); if(bd)bd.onclick=function(){ rackMove(1); };
+  var bg=document.getElementById('rkgoto'); if(bg)bg.onclick=function(){ if(state.rackSel)gotoMapa(state.rackSel); };
 }
 function rackLista(){
   if(!RACK)return;
@@ -2405,9 +2458,11 @@ function rackLista(){
       <div class="rmeta">${sw.zona} · ${(TYPE[sw.tipo]||['',''])[1]}${cap?' · '+cap+' puertos':''}</div></div>
       <span class="chip">${mine.length}/${N}</span></div><div class="rslots">${rows}</div></div>`;
   });
-  RACK.innerHTML=out+'</div>';
+  return out+'</div>';
+}
+function rackBind(){
   RACK.querySelectorAll('.slot.used').forEach(el=>el.onclick=ev=>{
-    if(ev.target.tagName==='BUTTON'||ev.target.tagName==='SELECT')return; select(el.dataset.id,true);});
+    if(ev.target.tagName==='BUTTON'||ev.target.tagName==='SELECT')return; gotoMapa(el.dataset.id);});
   RACK.querySelectorAll('.x').forEach(b=>b.onclick=ev=>{ev.stopPropagation();delLink(b.dataset.h,b.dataset.d);});
   RACK.querySelectorAll('.psel').forEach(s=>s.onchange=ev=>{
     const d=ev.target.value; if(!d)return;
@@ -3089,6 +3144,13 @@ document.getElementById('bGrid').onclick=function(){
     render(); }
   else { render(); }
 };
+document.getElementById('bLock').onclick=function(){
+  state.lockZones=!state.lockZones;
+  setBtn('bLock',state.lockZones);
+  document.body.classList.toggle('lockz',state.lockZones);
+  document.getElementById('bLock').textContent=state.lockZones?'\ud83d\udd12 Secciones fijas':'\ud83d\udd12 Fijar secciones';
+  try{ localStorage.setItem('nm_lockz',state.lockZones?'1':'0'); }catch(e){}
+};
 document.getElementById('bSide').onclick=function(){
   var hide=!document.body.classList.contains('noside');
   document.body.classList.toggle('noside',hide);
@@ -3382,5 +3444,6 @@ document.getElementById('p_close').onclick=function(){ document.getElementById('
 loadDoc(); if(!restoreLayout())layout(); rebuildUI(); syncEdit(); applyTitle(); bindTitle(); fit(); render(); renderList(); showDetail();
 document.getElementById('bEdge').textContent='Trazado: '+(doc.estyle==='orto'?'ortogonal':(doc.estyle||'curvo'));
 setBtn('bGrid',!!state.grid);
+try{ if(localStorage.getItem('nm_lockz')==='1'){ state.lockZones=true; setBtn('bLock',true); document.body.classList.add('lockz'); document.getElementById('bLock').textContent='\ud83d\udd12 Secciones fijas'; } }catch(e){}
 
 </script></body></html>
