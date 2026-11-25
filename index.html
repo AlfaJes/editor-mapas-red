@@ -1037,6 +1037,21 @@ function borrarPuntosRedundantes(){
   doc.edges.forEach(function(e){ if(Array.isArray(e.pts)&&e.pts.length){ var k=pruneEdgePoints(e); n+=k; } });
   return n;
 }
+function segMid(anch,i,hasPts,e){
+  var p1=anch[i], p2=anch[i+1], st=doc.estyle||'curvo';
+  if(st==='orto')return {x:p2[0], y:p1[1]};
+  if(st==='recto')return {x:(p1[0]+p2[0])/2, y:(p1[1]+p2[1])/2};
+  if(!hasPts){
+    var cx,cy;
+    if(e&&typeof e.bx==='number'){ cx=e.bx; cy=e.by; }
+    else { cx=(p1[0]+p2[0])/2; cy=(p1[1]+p2[1])/2-18; }
+    return {x:(p1[0]+2*cx+p2[0])/4, y:(p1[1]+2*cy+p2[1])/4};
+  }
+  var p0=anch[i-1]||p1, p3=anch[i+2]||p2;
+  var c1x=p1[0]+(p2[0]-p0[0])/6, c1y=p1[1]+(p2[1]-p0[1])/6;
+  var c2x=p2[0]-(p3[0]-p1[0])/6, c2y=p2[1]-(p3[1]-p1[1])/6;
+  return {x:(p1[0]+3*c1x+3*c2x+p2[0])/8, y:(p1[1]+3*c1y+3*c2y+p2[1])/8};
+}
 function edgeD(a,b,e){
   var P=(e&&Array.isArray(e.pts))?e.pts:[];
   var st=doc.estyle||'curvo';
@@ -1118,8 +1133,8 @@ function render(){
       for(let i=0;i<anch.length-1;i++){
         const dxs=anch[i+1][0]-anch[i][0], dys=anch[i+1][1]-anch[i][1];
         if(Math.sqrt(dxs*dxs+dys*dys)<40)continue;
-        const mx=(anch[i][0]+anch[i+1][0])/2, my=(anch[i][1]+anch[i+1][1])/2;
-        out+=`<circle class="ehadd" data-e="${e.s}|${e.t}" data-mi="${i}" cx="${mx}" cy="${my}" r="4.5"/>`;
+        const m=segMid(anch,i,PP.length,e);
+        out+=`<circle class="ehadd" data-e="${e.s}|${e.t}" data-mi="${i}" cx="${m.x.toFixed(1)}" cy="${m.y.toFixed(1)}" r="4.5"/>`;
       }
       return out;})():'');
   GN.innerHTML=shown.map(n=>{
