@@ -8,7 +8,7 @@
     "build:public": "node build.mjs --public",
     "build:all": "node build.mjs && node build.mjs --public",
     "test": "node test/smoke.mjs dist/mapa.html",
-    "check": "node build.mjs && node test/smoke.mjs dist/mapa.html"
+    "check": "node build.mjs && node test/smoke.mjs dist/mapa.html 55 && node build.mjs --public && node test/smoke.mjs dist/publico.html 0"
   },
   "repository": {
     "type": "git",

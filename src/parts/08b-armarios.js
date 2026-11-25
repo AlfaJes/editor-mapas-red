@@ -2,6 +2,18 @@
 // Modelo: doc.racks = [{id, n, u, items:[{k:'dev'|'pp', id?, n?, u0, u, ports?, links?}]}]
 // u0 = U más baja que ocupa el elemento (1..u). Se dibuja de arriba abajo.
 
+
+var ACCESORIOS=[
+  {k:'bandeja',  n:'Bandeja',                u:1, col:'#64748b'},
+  {k:'bandeja2', n:'Bandeja 2U',             u:2, col:'#64748b'},
+  {k:'escobilla',n:'Escobilla',              u:1, col:'#475569'},
+  {k:'organizador',n:'Organizador de cables',u:1, col:'#475569'},
+  {k:'regleta',  n:'Regleta (PDU)',          u:1, col:'#94a3b8'},
+  {k:'ventilador',n:'Ventilador',            u:2, col:'#38bdf8'},
+  {k:'ciego',    n:'Ciego',                  u:1, col:'#334155'}
+];
+function accById(k){ return ACCESORIOS.filter(function(a){return a.k===k;})[0]||ACCESORIOS[0]; }
+
 function rackUOf(n){
   var fijo=parseInt(n&&n.u);
   if(fijo>0)return Math.max(1,Math.min(8,fijo));
@@ -93,6 +105,8 @@ function renderArmarios(){
     '<label class="rklbl">U <input id="rku" type="number" min="6" max="48" value="'+r.u+'" style="width:56px"></label>'+
     selDev+
     '<button class="btn sm" id="rkpp" title="Añadir patch panel de 24 puertos">＋ Patch</button>'+
+    '<select id="armacc" class="rkz" title="Añadir accesorio de armario"><option value="">＋ Accesorio…</option>'+
+      ACCESORIOS.map(function(a){return '<option value="'+a.k+'">'+a.n+'</option>';}).join('')+'</select>'+
     '<button class="btn sm" id="rknew" title="Crear otro armario">＋ Armario</button>'+
     '<button class="btn sm" id="rkdel" title="Borrar este armario">✕</button>'+
     '<button class="btn sm" id="rkpng2" title="Descargar en PNG">⤓ PNG</button>'+
@@ -113,7 +127,16 @@ function renderArmarios(){
     var h=Math.max(1,parseInt(it.u)||1);
     var pos=yDeU(it.u0||1,h,uTot,U);
     var y=pos.y, hh=h*U-2;
-    if(it.k==='pp'){
+    if(it.k==='acc'){
+      var ac=accById(it.acc);
+      s+='<g class="armitem acc" data-idx="'+idx+'" data-y="'+y+'">';
+      s+='<rect x="'+X0+'" y="'+y+'" width="'+W+'" height="'+hh+'" rx="3" fill="#0f1b2e" stroke="#2a3b57"/>';
+      s+='<rect x="'+X0+'" y="'+y+'" width="5" height="'+hh+'" rx="2" fill="'+(ac.col||'#64748b')+'"/>';
+      s+='<text x="'+(X0+14)+'" y="'+(y+13)+'" class="cabn">'+escAttr(it.n||ac.n)+'</text>';
+      s+='<text x="'+(X0+190)+'" y="'+(y+13)+'" class="cabs">accesorio</text>';
+      s+='<text class="cabxx" data-del="'+idx+'" x="'+(X0+W-8)+'" y="'+(y+13)+'" text-anchor="end">✕</text>';
+      s+='</g>';
+    } else if(it.k==='pp'){
       var ports=parseInt(it.ports)||24;
       s+='<g class="armitem pp" data-idx="'+idx+'" data-pp="1" data-y="'+y+'">';
       s+='<rect x="'+X0+'" y="'+y+'" width="'+W+'" height="'+hh+'" rx="4" fill="#101c30" stroke="#4b6a8f" stroke-dasharray="5 3"/>';
@@ -218,6 +241,20 @@ function bindArmarios(){
     r.items.push({k:'pp',n:'Patch '+(r.items.filter(function(x){return x.k==='pp';}).length+1)+' (24)',u0:u0,u:1,ports:24,links:{}});
     save(); renderArmarios();
   };
+  var acSel=document.getElementById('armacc');
+  if(acSel)acSel.onchange=function(){
+    var k=acSel.value; if(!k)return;
+    var ac=accById(k), h=ac.u||1;
+    var occ=rackOcupados(r,null), u0=0;
+    for(var u=r.u-h+1;u>=1;u--){
+      var libre=true;
+      for(var j=0;j<h;j++){ if(occ[u+j]){ libre=false; break; } }
+      if(libre){ u0=u; break; }
+    }
+    if(!u0){ alert('No hay hueco libre para '+ac.n+'.'); return; }
+    r.items.push({k:'acc',acc:k,n:ac.n,u:h,u0:u0});
+    save(); renderArmarios();
+  };
   var nw=document.getElementById('rknew');
   if(nw)nw.onclick=function(){
     var id='rk'+Date.now().toString(36);
@@ -260,7 +297,11 @@ function bindArmarios(){
         window.removeEventListener('mousemove',mm); window.removeEventListener('mouseup',mu);
         g.removeAttribute('transform'); g.style.opacity='';
         if(!movido){ state.rackSelItem=idx; renderArmarios(); return; }
-        var pasos=Math.round((e2.clientY-y0)/20);
+        var svgEl=g.ownerSVGElement||document.querySelector('.cabsvg');
+        var esc=1;
+        try{ esc=svgEl.getBoundingClientRect().width/(svgEl.viewBox.baseVal.width||830); }catch(e){}
+        var Upx=Math.max(6,20*(esc||1));
+        var pasos=Math.round((e2.clientY-y0)/Upx);
         var nuevo=Math.max(1,Math.min(r.u-(it.u||1)+1, u0-pasos));
         if(nuevo===u0)return;
         var prueba={k:it.k,id:it.id,u0:nuevo,u:it.u};
