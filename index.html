@@ -1112,16 +1112,24 @@ function segMid(anch,i,hasPts,e){
 function edgeD(a,b,e){
   var P=(e&&Array.isArray(e.pts))?e.pts:[];
   var st=doc.estyle||'curvo';
+  // arranca en el borde del circulo, no en el centro
+  var R=20;
+  var toP=(P.length?P[0]:[b.x,b.y]);
+  var fromP=(P.length?P[P.length-1]:[a.x,a.y]);
+  var v1x=toP[0]-a.x, v1y=toP[1]-a.y, l1=Math.sqrt(v1x*v1x+v1y*v1y)||1;
+  var v2x=b.x-fromP[0], v2y=b.y-fromP[1], l2=Math.sqrt(v2x*v2x+v2y*v2y)||1;
+  var AX=a.x+v1x/l1*R, AY=a.y+v1y/l1*R;
+  var BX=b.x-v2x/l2*R, BY=b.y-v2y/l2*R;
   if(P.length){
     if(st==='recto'){
-      var d1='M'+a.x+','+a.y; P.forEach(function(q){d1+=' L'+q[0]+','+q[1];});
-      return d1+' L'+b.x+','+b.y;
+      var d1='M'+AX.toFixed(1)+','+AY.toFixed(1); P.forEach(function(q){d1+=' L'+q[0]+','+q[1];});
+      return d1+' L'+BX.toFixed(1)+','+BY.toFixed(1);
     }
     if(st==='orto'){
-      var d2='M'+a.x+','+a.y; P.forEach(function(q){d2+=' H'+q[0]+' V'+q[1];});
-      return d2+' H'+b.x+' V'+b.y;
+      var d2='M'+AX.toFixed(1)+','+AY.toFixed(1); P.forEach(function(q){d2+=' H'+q[0]+' V'+q[1];});
+      return d2+' H'+BX.toFixed(1)+' V'+BY.toFixed(1);
     }
-    var all=[[a.x,a.y]].concat(P).concat([[b.x,b.y]]);
+    var all=[[AX,AY]].concat(P).concat([[BX,BY]]);
     var s2='M'+all[0][0]+','+all[0][1];
     for(var i=0;i<all.length-1;i++){
       var p0=all[i-1]||all[i], p1=all[i], p2=all[i+1], p3=all[i+2]||all[i+1];
@@ -1133,14 +1141,14 @@ function edgeD(a,b,e){
   }
   const st0=doc.estyle||'curvo';
   if(e&&typeof e.bx==='number'){
-    if(st0==='orto') return `M${a.x},${a.y} H${e.bx} V${e.by} H${b.x} V${b.y}`;
-    if(st0==='recto')return `M${a.x},${a.y} L${e.bx},${e.by} L${b.x},${b.y}`;
-    return `M${a.x},${a.y} Q${e.bx},${e.by} ${b.x},${b.y}`;
+    if(st0==='orto') return `M${AX.toFixed(1)},${AY.toFixed(1)} H${e.bx} V${e.by} H${BX.toFixed(1)} V${BY.toFixed(1)}`;
+    if(st0==='recto')return `M${AX.toFixed(1)},${AY.toFixed(1)} L${e.bx},${e.by} L${BX.toFixed(1)},${BY.toFixed(1)}`;
+    return `M${AX.toFixed(1)},${AY.toFixed(1)} Q${e.bx},${e.by} ${BX.toFixed(1)},${BY.toFixed(1)}`;
   }
-  if(st==='recto')return `M${a.x},${a.y} L${b.x},${b.y}`;
-  if(st==='orto'){const mx=(a.x+b.x)/2;return `M${a.x},${a.y} H${mx} V${b.y} H${b.x}`;}
-  const mx=(a.x+b.x)/2,my=(a.y+b.y)/2-18;
-  return `M${a.x},${a.y} Q${mx},${my} ${b.x},${b.y}`;
+  if(st==='recto')return `M${AX.toFixed(1)},${AY.toFixed(1)} L${BX.toFixed(1)},${BY.toFixed(1)}`;
+  if(st==='orto'){const mx=(AX+BX)/2;return `M${AX.toFixed(1)},${AY.toFixed(1)} H${mx.toFixed(1)} V${BY.toFixed(1)} H${BX.toFixed(1)}`;}
+  const mx=(AX+BX)/2,my=(AY+BY)/2-18;
+  return `M${AX.toFixed(1)},${AY.toFixed(1)} Q${mx.toFixed(1)},${my.toFixed(1)} ${BX.toFixed(1)},${BY.toFixed(1)}`;
 }
 function elabBox(e){
   var nt=e.nt; if(!nt||!String(nt.t||'').trim())return'';
