@@ -166,7 +166,7 @@ document.addEventListener('mouseleave',forceRelease);
 window.addEventListener('blur',forceRelease);
 document.addEventListener('visibilitychange',function(){ if(document.hidden)forceRelease(); });
 window.addEventListener('pointercancel',forceRelease);
-window.addEventListener('mouseup',()=>{
+window.addEventListener('mouseup',(ev)=>{
   if(adrag){ if(!adrag.move)snapArrowEnd(adrag.a,adrag.end);
     snap(); save(); adrag=null; svg.classList.remove('pan'); suppressClick=true; render(); return; }
   if(nres){ snap(); save(); nres=null; svg.classList.remove('pan'); suppressClick=true; return; }
@@ -189,7 +189,7 @@ window.addEventListener('mouseup',()=>{
     if(d0&&d0.moved){dgroup.forEach(o=>{o.n.nx=o.n.x;o.n.ny=o.n.y;});save();suppressClick=true;}
     dgroup=null;d0=null;svg.classList.remove('pan');return;
   }
-  if(drag){ if(drag._moved){drag.nx=drag.x;drag.ny=drag.y;save();} else if(!e.__touch) select(drag.id,false); drag=null; }
+  if(drag){ if(drag._moved){drag.nx=drag.x;drag.ny=drag.y;save();} else if(!(ev&&ev.__touch)) select(drag.id,false); drag=null; }
   if(sbox){
     var sb=document.getElementById('selbox'); if(sb)sb.style.display='none';
     var cur=sbox.cur;
@@ -265,4 +265,15 @@ document.addEventListener('keydown',e=>{
     }
     if(state.sel&&byId[state.sel]){ e.preventDefault(); delNode(state.sel); return; }
   }
+});
+
+// red de seguridad: si algo falla al soltar, nunca dejar el equipo pegado al raton
+window.addEventListener('mouseup',function(){
+  try{
+    if(drag){ if(drag._moved){ drag.nx=drag.x; drag.ny=drag.y; try{save();}catch(e){} } drag=null; svg.classList.remove('pan'); }
+    if(dgroup){ dgroup=null; d0=null; svg.classList.remove('pan'); }
+    if(ndrag){ ndrag=null; svg.classList.remove('pan'); }
+    if(zdrag){ zdrag=null; svg.classList.remove('pan'); }
+    if(pan){ pan=null; svg.classList.remove('pan'); }
+  }catch(e){}
 });
