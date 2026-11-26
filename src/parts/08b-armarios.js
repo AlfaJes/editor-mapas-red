@@ -145,17 +145,23 @@ function renderArmarios(){
         var _libre=Math.max(0,(it.u||1)-_usada);
         s+='<rect class="armplusbox" data-tray="'+idx+'" x="'+(X0+W-158)+'" y="'+(y+2)+'" width="100" height="15" rx="3" fill="#12301f" stroke="#3f7a58" opacity=".9"/>';
         s+='<text class="armplus" data-tray="'+idx+'" x="'+(X0+W-62)+'" y="'+(y+13)+'" text-anchor="end" title="Anadir un equipo a esta bandeja">＋ equipo</text>';
-        var kids=it.kids||[], base=y+hh, cum=0;
+        var kids=it.kids||[];
+        // reparto exacto del alto interior: quepan los equipos que quepan, la bandeja no crece
+        var innerTop=y+3, innerBot=y+hh-6;
+        var rowH=(innerBot-innerTop)/Math.max(1,kids.length);
+        var cum=0;
         kids.forEach(function(k,ki){
           var nd=byId[k.id]; if(!nd)return;
-          var kh=Math.max(1,parseInt(k.h)||1)*U-2;
-          var ky=base-cum-kh;
+          var kh=Math.max(2.2,rowH-1.2);
+          var kfs=Math.max(5.5,Math.min(10.5,kh-2.2));
+          var ky=innerBot-(ki+1)*rowH+(rowH-kh)/2;
           s+='<g class="armkid" data-kid="'+idx+':'+ki+'">';
           s+='<rect x="'+(X0+10)+'" y="'+ky+'" width="'+(W-20)+'" height="'+kh+'" rx="2" fill="#16233a" stroke="#3a5578"/>';
           s+='<rect x="'+(X0+10)+'" y="'+ky+'" width="4" height="'+kh+'" rx="1.5" fill="'+(col(nd)||'#64748b')+'"/>';
           var nmk=String(nd.nombre||''); if(nmk.length>20)nmk=nmk.slice(0,19)+'…';
-          s+='<text x="'+(X0+22)+'" y="'+(ky+kh/2+4)+'" class="cabn2">'+escAttr(nmk)+'<title>'+escAttr(nd.nombre)+' · '+escAttr((TYPE[nd.tipo]||['',''])[1])+' · '+(k.h||1)+'U</title></text>';
+          if(kh>=7) s+='<text x="'+(X0+22)+'" y="'+(ky+kh/2+kfs/3)+'" class="cabn2" style="font-size:'+kfs.toFixed(1)+'px">'+escAttr(nmk)+'<title>'+escAttr(nd.nombre)+' · '+escAttr((TYPE[nd.tipo]||['',''])[1])+' · '+(k.h||1)+'U</title></text>';
           // puertos del equipo dentro de la bandeja
+          if(kh>=14){
           var kcap=Math.min(26,capFor(nd.id));
           var kx1=X0+232, kx2=X0+W-52, kstep=Math.min(8,(kx2-kx1)/Math.max(1,kcap));
           s+='<rect x="'+(kx1-3)+'" y="'+(ky+kh-11)+'" width="'+((kcap*kstep)+5).toFixed(1)+'" height="9" rx="2" fill="#0b1524" opacity=".6" pointer-events="none"/>';
@@ -165,9 +171,10 @@ function renderArmarios(){
                (eused?' style="fill:'+(cabColor(eused)||'#4f8cff')+'"':'')+
                '><title>P'+qk+(eused?' (ocupado)':' (libre)')+'</title></rect>';
           }
-          s+='<text class="cabxx" data-kid="'+idx+':'+ki+'" x="'+(X0+W-16)+'" y="'+(ky+kh/2+4)+'" text-anchor="end">✕</text>';
+          }
+          if(kh>=7) s+='<text class="cabxx" data-kid="'+idx+':'+ki+'" x="'+(X0+W-16)+'" y="'+(ky+kh/2+3.5)+'" text-anchor="end" style="font-size:'+Math.max(7,Math.min(11,kh-2)).toFixed(1)+'px">✕</text>';
           s+='</g>';
-          cum+=kh+1;
+          cum+=rowH;
         });
         s+='<rect x="'+(X0+4)+'" y="'+(y+hh-5)+'" width="'+(W-8)+'" height="5" rx="1.5" fill="#2a3d57" stroke="#5d7594" stroke-width=".7" opacity=".95"/>';
         s+='<text x="'+(X0+W-14)+'" y="'+(y+hh-7.5)+'" class="cabi" text-anchor="end" opacity=".7">repisa</text>';

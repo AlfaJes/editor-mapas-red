@@ -237,16 +237,16 @@ function trayOpen(idx) {
     var donde = w ? (w.ki !== undefined ? ' · ya en ' + w.it.n : ' · ya en ' + w.r.n) : '';
     return '<option value="' + n.id + '">' + (n.nombre || '(sin nombre)') + ' — ' + ((TYPE[n.tipo] || ['', ''])[1] || n.tipo) + donde + '</option>';
   }).join('');
-  var libre = trayLibres(it);
+  var tope = Math.max(1, parseInt(it.u) || 1);
   var hs = document.getElementById('trm_h');
   hs.innerHTML = '';
-  if (libre > 0) { for (var k = 1; k <= libre; k++) hs.innerHTML += '<option value="' + k + '">' + k + ' U</option>'; }
-  else { hs.innerHTML = '<option value="">—</option>'; }
-  hs.disabled = !libre;
-  document.getElementById('trm_libre').textContent = libre
-    ? 'Quedan ' + libre + ' U libres en la bandeja (no cambia de altura).'
-    : 'La bandeja está llena. Quita algún equipo o sube su altura con la «U» de la cabecera.';
-  document.getElementById('trm_ok').disabled = !libre;
+  for (var k = 1; k <= tope; k++) hs.innerHTML += '<option value="' + k + '">' + k + ' U</option>';
+  hs.disabled = false;
+  var usada = 0; (it.kids || []).forEach(function (x) { usada += Math.max(1, parseInt(x.h) || 1); });
+  document.getElementById('trm_libre').textContent =
+    'La bandeja mide ' + tope + 'U y no cambia. Lleva ' + usada + 'U en ' + (it.kids || []).length +
+    ' equipo(s): si metes más, se reparten el alto.';
+  document.getElementById('trm_ok').disabled = false;
   document.getElementById('trm').classList.add('on');
 }
 function trayClose() { document.getElementById('trm').classList.remove('on'); }
@@ -257,7 +257,8 @@ function traySave() {
   var h = Math.max(1, parseInt(document.getElementById('trm_h').value) || 1);
   if (!id) { alert('Elige un equipo.'); return; }
   var libre = trayLibres(it);
-  if (h > libre) { alert('No cabe: la bandeja tiene ' + libre + ' U libres y el equipo ocupa ' + h + 'U.'); return; }
+  var tope = Math.max(1, parseInt(it.u) || 1);
+  h = Math.min(h, tope);
   // si ya estaba colocado en otro sitio, se mueve aquí
   var w = trayWhere(id);
   if (w) {
