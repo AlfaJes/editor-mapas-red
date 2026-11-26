@@ -106,7 +106,15 @@ export function yDeU(u0,h,uTotal,U){
   return {y:26+fila*U};
 }
 
-export function portStrip(px1,px2,y,h,id){
+export // texto del tooltip de un puerto del patch (trasera = equipo, delantera = switch)
+function _ptit(it,p,ee,pnid,oth){
+  var lk=(it&&it.links)?it.links[p]:null;
+  var nm=function(x){return x?((S.byId[x.devId]||{}).nombre||'?')+' P'+x.port:null;};
+  if(lk&&(lk.a||lk.b)) return 'Puerto '+p+' \u00b7 trasera: '+(nm(lk.a)||'libre')+' \u00b7 delantera: '+(nm(lk.b)||'libre');
+  if(ee&&oth) return 'Puerto '+p+' \u2192 '+(oth.nombre||'?')+' P'+(ee.s===pnid?ee.pB:ee.pA);
+  return 'Puerto '+p+' (libre)';
+}
+function portStrip(px1,px2,y,h,id){
   var cap=Math.min(24, capFor(id));
   var band=px2-px1;
   var step=Math.min(16, band/cap);
@@ -119,9 +127,11 @@ export function portStrip(px1,px2,y,h,id){
   for(var q=1;q<=cap;q++){
     var e=S.doc.edges.filter(function(x){return (x.s===id&&x.pA===q)||(x.t===id&&x.pB===q);})[0];
     var lc=e?(cabColor(e)||'#4f8cff'):'';
+    var _oth=e?(S.byId[e.s===id?e.t:e.s]||{nombre:'?'}):null;
+    var _tit='P'+q+(e?(' \u2192 '+(_oth.nombre||'?')+' P'+(e.s===id?e.pB:e.pA)):' (libre)');
     var bx=px0+(q-1)*step;
     var w=Math.max(3,step-1.8);
-    s+='<rect class="devport'+(e?' on':'')+'" data-dp="'+id+'" data-p="'+q+'" x="'+(bx+0.9).toFixed(1)+'" y="'+(ty).toFixed(1)+'" width="'+w.toFixed(1)+'" height="'+sh.toFixed(1)+'" rx="1.2"'+(e?' style="fill:'+lc+'"':'')+'><title>P'+q+(e?' (ocupado)':' (libre)')+'</title></rect>';
+    s+='<rect class="devport'+(e?' on':'')+'" data-dp="'+id+'" data-p="'+q+'" x="'+(bx+0.9).toFixed(1)+'" y="'+(ty).toFixed(1)+'" width="'+w.toFixed(1)+'" height="'+sh.toFixed(1)+'" rx="1.2"'+(e?' style="fill:'+lc+'"':'')+'><title>'+escAttr(_tit)+'</title></rect>';
   }
   s+='<rect x="'+(px0-2)+'" y="'+(ty+sh).toFixed(1)+'" width="'+(totalW+4)+'" height="'+stripH+'" rx="1" fill="#c9d4e2" opacity=".9" pointer-events="none"/>';
   for(var q2=1;q2<=cap;q2++){
@@ -292,7 +302,7 @@ export function renderArmarios(){
         var w2=Math.max(4,pw-2.6);
         s+='<rect class="armport'+(ee?' on':'')+'" data-pp="'+idx+'" data-p="'+p+'" x="'+(bx2+1.2).toFixed(1)+'" y="'+ry.toFixed(1)+'" width="'+w2.toFixed(1)+'" height="'+sockH.toFixed(1)+'" rx="1.6"'+
            (ee?' style="fill:'+lcol+';fill-opacity:.9;stroke:'+lcol+'"':'')+
-           '><title>Puerto '+p+(ee?(' → '+(oth.nombre||'?')+' P'+(ee.s===pnid?ee.pB:ee.pA)):' (libre)')+'</title></rect>';
+           '><title>'+escAttr(_ptit(it,p,ee,pnid,oth))+'</title></rect>';
         s+='<text x="'+(bx2+pw/2-1.2).toFixed(1)+'" y="'+(ry+sockH+stripH-1.4).toFixed(1)+'" class="cabpn2" text-anchor="middle">'+p+'</text>';
       }
       s+='</g>';
@@ -528,4 +538,27 @@ export function enlazarPatchCompleto(itIdx){
   });
   ppApplyLinks(it);
   save(); renderArmarios(); render(); renderList();
+}
+
+// texto del tooltip flotante al pasar el raton por un puerto del armario
+export function portTip(el){
+  if(!el||!el.getAttribute)return '';
+  var p=+el.getAttribute('data-p')||0;
+  if(el.classList&&el.classList.contains('devport')){
+    var id=el.getAttribute('data-dp');
+    var n=S.byId[id]||{};
+    var eds=S.doc.edges.filter(function(x){return (x.s===id&&x.pA===p)||(x.t===id&&x.pB===p);});
+    var l=eds.map(function(x){var o=S.byId[x.s===id?x.t:x.s]||{};return '\u2192 '+(o.nombre||'?')+' P'+(x.s===id?x.pB:x.pA);});
+    return '<b>'+escAttr(n.nombre||'?')+' \u00b7 P'+p+'</b><span>'+(l.length?l.join('<br>'):'libre')+'</span>';
+  }
+  if(el.classList&&el.classList.contains('armport')){
+    var idx=+el.getAttribute('data-pp');
+    var sv=el.closest('.cabsvg'), rid=sv?sv.getAttribute('data-rid'):'';
+    var r=(S.doc.racks||[]).filter(function(x){return x.id===rid;})[0];
+    var it=r&&r.items[idx]; if(!it)return '';
+    var lk=(it.links||{})[p]||null;
+    var nm=function(x){return x?((S.byId[x.devId]||{}).nombre||'?')+' P'+x.port:'libre';};
+    return '<b>'+escAttr(it.n||'Patch')+' \u00b7 P'+p+'</b><span>trasera: '+nm(lk&&lk.a)+'<br>delantera: '+nm(lk&&lk.b)+'</span>';
+  }
+  return '';
 }
