@@ -108,7 +108,7 @@ export function lnkFillPorts(want) {
     }
   }
 }
-// ---------- patch panel: cada puerto tiene DOS lados (equipo frontal <-> switch trasero) ----------
+// ---------- patch panel: cada puerto tiene DOS lados (equipo trasero <-> switch delantero) ----------
 function ppLink(it, p) {
   var lk = (it.links || {})[p];
   if (!lk) return { a: null, b: null };
@@ -172,13 +172,13 @@ export function lnkOpenPatch(idx, port) {
   var lk = ppLink(it, port);
   document.getElementById('lnk_t').textContent = (it.n || 'Patch') + ' · puerto ' + port;
   var txt = [];
-  if (lk.a) txt.push('frontal: ' + ((S.byId[lk.a.devId] || {}).nombre || '?') + ' P' + lk.a.port);
-  if (lk.b) txt.push('trasero: ' + ((S.byId[lk.b.devId] || {}).nombre || '?') + ' P' + lk.b.port);
+  if (lk.a) txt.push('trasera (equipo): ' + ((S.byId[lk.a.devId] || {}).nombre || '?') + ' P' + lk.a.port);
+  if (lk.b) txt.push('delantera (switch): ' + ((S.byId[lk.b.devId] || {}).nombre || '?') + ' P' + lk.b.port);
   document.getElementById('lnk_sub').textContent = txt.length
     ? ('Ahora tiene ' + txt.join(' y ') + '.')
-    : 'Un lado va al equipo (delante) y el otro al switch o router (detrás).';
-  document.getElementById('lnk_l1').textContent = 'Equipo (parte frontal)';
-  document.getElementById('lnk_l2').textContent = 'Del patch al switch / router (parte trasera)';
+    : 'La parte trasera viene del equipo; la delantera va al switch o router.';
+  document.getElementById('lnk_l1').textContent = 'Equipo · parte trasera (del equipo al patch)';
+  document.getElementById('lnk_l2').textContent = 'Switch / router · parte delantera (del patch al switch)';
   document.getElementById('lnk_side2').style.display = 'block';
   ppFillSide('', false);
   ppFillSide('2', false);
@@ -215,7 +215,7 @@ function readSide(sfx) {
 }
 
 export function lnkSave() {
-  // ---- patch: dos lados (frontal + trasero) ----
+  // ---- patch: dos lados (equipo en la trasera, switch en la delantera) ----
   if (S.LN.kind === 'patch') {
     var rk = lnkRack(), itp = rk && rk.items[S.LN.idx];
     if (!itp) return;

@@ -83,7 +83,7 @@ export function dedupePorts(){
     for(var p=1;p<=cap+40;p++){ if(!seen[id+':'+p]) return p; }
     return cap+41;
   }
-  // en un patch panel cada puerto puede tener dos cables (frontal y trasero)
+  // en un patch panel cada puerto puede tener dos cables (trasero = equipo, delantero = switch)
   function esPatch(id){ var n=S.byId[id]; return !!(n&&n.tipo==='patch'); }
   S.doc.edges.forEach(function(e){
     var k1=e.s+':'+e.pA;

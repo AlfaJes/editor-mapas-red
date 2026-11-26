@@ -514,7 +514,7 @@ export function enlazarPatchCompleto(itIdx){
   var nd=it.nid&&S.byId[it.nid];
   if(!nd){ try{ nd=ppMakeNode(it); }catch(e){ return; } }
   var t2=ppTotalOf(it), cap=Math.min(t2.tot, parseInt(sw.puertos)||capFor(sw.id));
-  // el switch va en la parte trasera de cada puerto; la frontal (equipo) se respeta
+  // el switch va en la parte delantera de cada puerto; la trasera (equipo) se respeta
   it.links=it.links||{};
   for(var q=1;q<=cap;q++){
     var lk=it.links[q]||{a:null,b:null};
