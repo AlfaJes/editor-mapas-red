@@ -66,6 +66,21 @@ function currentRack(){
   return r;
 }
 
+
+// inserta "extra" U en el armario a partir de la altura del elemento idx:
+// lo que esté por encima sube, y el armario crece lo mismo
+function insertarU(r, idx, extra){
+  if(!(extra>0)) return;
+  var it=r.items[idx]; if(!it) return;
+  var base=(it.u0||1);
+  var tope=base+Math.max(1,parseInt(it.u)||1)-1;
+  r.items.forEach(function(x,i){
+    if(i===idx) return;
+    var u0=x.u0||1;
+    if(u0>tope) x.u0=u0+extra;
+  });
+  r.u=Math.min(48, (parseInt(r.u)||42)+extra);
+}
 function rackOcupados(r,skip){
   var m={};
   r.items.forEach(function(it){
@@ -136,51 +151,67 @@ function renderArmarios(){
       s+='<g class="armitem acc" data-idx="'+idx+'" data-y="'+y+'">';
       s+='<rect x="'+X0+'" y="'+y+'" width="'+W+'" height="'+hh+'" rx="3" fill="#0f1b2e" stroke="#2a3b57"/>';
       s+='<rect x="'+X0+'" y="'+y+'" width="5" height="'+hh+'" rx="2" fill="'+(ac.col||'#64748b')+'"/>';
-      s+='<text x="'+(X0+14)+'" y="'+(y+13)+'" class="cabn">'+escAttr(it.n||ac.n)+'</text>';
-      s+='<text x="'+(X0+190)+'" y="'+(y+13)+'" class="cabs">accesorio</text>';
-      s+='<text class="armu" data-hu="'+idx+'" x="'+(X0+W-26)+'" text-anchor="end" y="'+(y+13)+'" title="Altura fija ('+(it.u||1)+'U). Clic para cambiarla.">'+(it.u||1)+'U</text>';
-      s+='<text class="cabxx" data-del="'+idx+'" x="'+(X0+W-6)+'" y="'+(y+13)+'" text-anchor="end">✕</text>';
+      var nk0=(it.kids||[]).length;
+      var hdr='';
+      if(nk0<=2){
+        hdr+='<text x="'+(X0+14)+'" y="'+(y+13)+'" class="cabn">'+escAttr(it.n||ac.n)+'</text>';
+        hdr+='<text x="'+(X0+190)+'" y="'+(y+13)+'" class="cabs">accesorio</text>';
+      } else {
+        hdr+='<rect x="'+(X0+W-196)+'" y="'+(y+1)+'" width="194" height="12" rx="2" fill="#0f1b2e" opacity=".92"/>';
+      }
+      hdr+='<text class="armu" data-hu="'+idx+'" x="'+(X0+W-26)+'" text-anchor="end" y="'+(y+13)+'" title="Altura fija ('+(it.u||1)+'U). Clic para cambiarla.">'+(it.u||1)+'U</text>';
+      hdr+='<text class="cabxx" data-del="'+idx+'" x="'+(X0+W-6)+'" y="'+(y+13)+'" text-anchor="end">✕</text>';
       if(it.acc==='bandeja'||it.acc==='bandeja2'){
         var _usada=0; (it.kids||[]).forEach(function(k){ _usada+=Math.max(1,parseInt(k.h)||1); });
         var _libre=Math.max(0,(it.u||1)-_usada);
-        s+='<rect class="armplusbox" data-tray="'+idx+'" x="'+(X0+W-158)+'" y="'+(y+2)+'" width="100" height="15" rx="3" fill="#12301f" stroke="#3f7a58" opacity=".9"/>';
-        s+='<text class="armplus" data-tray="'+idx+'" x="'+(X0+W-62)+'" y="'+(y+13)+'" text-anchor="end" title="Anadir un equipo a esta bandeja">＋ equipo</text>';
+        var plus='';
+        plus+='<rect class="armplusbox" data-tray="'+idx+'" x="'+(X0+W-158)+'" y="'+(y+2)+'" width="100" height="15" rx="3" fill="#12301f" stroke="#3f7a58" opacity=".9"/>';
+        plus+='<text class="armplus" data-tray="'+idx+'" x="'+(X0+W-62)+'" y="'+(y+13)+'" text-anchor="end" title="Anadir un equipo a esta bandeja">＋ equipo ('+(it.kids||[]).length+')</text>';
         var kids=it.kids||[];
-        // reparto exacto del alto interior: quepan los equipos que quepan, la bandeja no crece
-        var innerTop=y+3, innerBot=y+hh-6;
-        var rowH=(innerBot-innerTop)/Math.max(1,kids.length);
-        var cum=0;
+        // reparto en rejilla: si no caben en una columna, se ponen en varias
+        var innerTop=y+(kids.length<=2?13:2), innerBot=y+hh-5;
+        var avail=Math.max(8,innerBot-innerTop);
+        var maxRows=Math.max(1,Math.floor(avail/9));
+        var cols=Math.max(1,Math.ceil(kids.length/maxRows));
+        var rows=Math.max(1,Math.ceil(kids.length/cols));
+        var cw=(W-24)/cols, rh=avail/rows;
         kids.forEach(function(k,ki){
           var nd=byId[k.id]; if(!nd)return;
-          var kh=Math.max(2.2,rowH-1.2);
-          var kfs=Math.max(5.5,Math.min(10.5,kh-2.2));
-          var ky=innerBot-(ki+1)*rowH+(rowH-kh)/2;
+          var cc=ki%cols, rr=Math.floor(ki/cols);
+          var kh=Math.max(6,Math.min(rh-1.6,44));
+          var kfs=Math.max(6,Math.min(10.5,kh-2.6));
+          var kx=X0+12+cc*cw, ky=innerBot-(rr+1)*rh+(rh-kh)/2;
           s+='<g class="armkid" data-kid="'+idx+':'+ki+'">';
-          s+='<rect x="'+(X0+10)+'" y="'+ky+'" width="'+(W-20)+'" height="'+kh+'" rx="2" fill="#16233a" stroke="#3a5578"/>';
-          s+='<rect x="'+(X0+10)+'" y="'+ky+'" width="4" height="'+kh+'" rx="1.5" fill="'+(col(nd)||'#64748b')+'"/>';
-          var nmk=String(nd.nombre||''); if(nmk.length>20)nmk=nmk.slice(0,19)+'…';
-          if(kh>=7) s+='<text x="'+(X0+22)+'" y="'+(ky+kh/2+kfs/3)+'" class="cabn2" style="font-size:'+kfs.toFixed(1)+'px">'+escAttr(nmk)+'<title>'+escAttr(nd.nombre)+' · '+escAttr((TYPE[nd.tipo]||['',''])[1])+' · '+(k.h||1)+'U</title></text>';
-          // puertos del equipo dentro de la bandeja
-          if(kh>=14){
-          var kcap=Math.min(26,capFor(nd.id));
-          var kx1=X0+232, kx2=X0+W-52, kstep=Math.min(8,(kx2-kx1)/Math.max(1,kcap));
-          s+='<rect x="'+(kx1-3)+'" y="'+(ky+kh-11)+'" width="'+((kcap*kstep)+5).toFixed(1)+'" height="9" rx="2" fill="#0b1524" opacity=".6" pointer-events="none"/>';
-          for(var qk=1;qk<=kcap;qk++){
-            var eused=doc.edges.filter(function(e){return (e.s===nd.id&&e.pA===qk)||(e.t===nd.id&&e.pB===qk);})[0];
-            s+='<rect class="devport'+(eused?' on':'')+'" data-dp="'+nd.id+'" data-p="'+qk+'" x="'+(kx1+(qk-1)*kstep).toFixed(1)+'" y="'+(ky+kh-10)+'" width="'+Math.max(2,kstep-1.4).toFixed(1)+'" height="6" rx="1"'+
-               (eused?' style="fill:'+(cabColor(eused)||'#4f8cff')+'"':'')+
-               '><title>P'+qk+(eused?' (ocupado)':' (libre)')+'</title></rect>';
+          s+='<rect x="'+kx+'" y="'+ky+'" width="'+(cw-4)+'" height="'+kh+'" rx="2" fill="#16233a" stroke="#3a5578"><title>'+escAttr(nd.nombre)+' · '+escAttr((TYPE[nd.tipo]||['',''])[1])+' · '+(k.h||1)+'U</title></rect>';
+          s+='<rect x="'+kx+'" y="'+ky+'" width="4" height="'+kh+'" rx="1.5" fill="'+(col(nd)||'#64748b')+'"/>';
+          var nmk=String(nd.nombre||'');
+          var maxc=Math.max(6,Math.floor((cw-24)/6.2)); if(nmk.length>maxc)nmk=nmk.slice(0,maxc-1)+'…';
+          s+='<text x="'+(kx+10)+'" y="'+(ky+kh/2+kfs/3)+'" class="cabn2" style="font-size:'+kfs.toFixed(1)+'px">'+escAttr(nmk)+'</text>';
+          s+='<text class="cabxx" data-kid="'+idx+':'+ki+'" x="'+(kx+cw-12)+'" y="'+(ky+kh/2+3.2)+'" text-anchor="end" style="font-size:'+Math.max(7,Math.min(11,kh-2)).toFixed(1)+'px">✕</text>';
+          // puertos del equipo, si hay sitio
+          if(kh>=16 && cw>=150){
+            var kcap=Math.min(24,capFor(nd.id));
+            var pkx=kx+cw*0.52, pk2=kx+cw-30, pst=Math.min(7,(pk2-pkx)/Math.max(1,kcap));
+            s+='<rect x="'+(pkx-2)+'" y="'+(ky+kh-10)+'" width="'+((kcap*pst)+4).toFixed(1)+'" height="8" rx="2" fill="#0b1524" opacity=".6" pointer-events="none"/>';
+            for(var qk=1;qk<=kcap;qk++){
+              var eused=doc.edges.filter(function(e){return (e.s===nd.id&&e.pA===qk)||(e.t===nd.id&&e.pB===qk);})[0];
+              s+='<rect class="devport'+(eused?' on':'')+'" data-dp="'+nd.id+'" data-p="'+qk+'" x="'+(pkx+(qk-1)*pst).toFixed(1)+'" y="'+(ky+kh-9)+'" width="'+Math.max(2,pst-1.2).toFixed(1)+'" height="5" rx="1"'+
+                 (eused?' style="fill:'+(cabColor(eused)||'#4f8cff')+'"':'')+
+                 '><title>P'+qk+(eused?' (ocupado)':' (libre)')+'</title></rect>';
+            }
           }
-          }
-          if(kh>=7) s+='<text class="cabxx" data-kid="'+idx+':'+ki+'" x="'+(X0+W-16)+'" y="'+(ky+kh/2+3.5)+'" text-anchor="end" style="font-size:'+Math.max(7,Math.min(11,kh-2)).toFixed(1)+'px">✕</text>';
           s+='</g>';
-          cum+=rowH;
         });
         s+='<rect x="'+(X0+4)+'" y="'+(y+hh-5)+'" width="'+(W-8)+'" height="5" rx="1.5" fill="#2a3d57" stroke="#5d7594" stroke-width=".7" opacity=".95"/>';
         s+='<text x="'+(X0+W-14)+'" y="'+(y+hh-7.5)+'" class="cabi" text-anchor="end" opacity=".7">repisa</text>';
         if(!kids.length){
           s+='<text x="'+(X0+W/2)+'" y="'+(y+hh/2+2)+'" class="cabi" text-anchor="middle">bandeja vacia — pulsa "＋ equipo"</text>';
         }
+        if((it.kids||[]).length<=2) s+='<rect x="'+(X0+1)+'" y="'+y+'" width="'+(W-2)+'" height="14" fill="#0f1b2e" opacity=".92" pointer-events="none"/>';
+        s+=hdr;
+        s+=plus;
+      } else {
+        s+=hdr;
       }
       s+='</g>';
     } else if(it.k==='pp'){

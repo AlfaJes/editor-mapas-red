@@ -267,6 +267,7 @@ function traySave() {
   }
   it.kids = it.kids || [];
   it.kids.push({ id: id, h: h });
+  // la bandeja no cambia de altura: los equipos se reparten el hueco
   save(); renderArmarios(); trayClose();
 }
 (function () {
