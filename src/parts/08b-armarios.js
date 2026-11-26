@@ -438,6 +438,7 @@ function bindArmarios(){
   Array.prototype.forEach.call(document.querySelectorAll('.armitem'),function(g){
     g.addEventListener('mousedown',function(ev){
       if(ev.target.closest('[data-del]'))return;
+      if(ev.target.closest('.armkid'))return;
       if(ev.target.closest('.armport'))return;
       if(ev.target.closest('.devport'))return;
       if(ev.target.closest('[data-hu],[data-ppn],[data-bulk],[data-del],[data-cfg]'))return;

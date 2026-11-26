@@ -144,9 +144,9 @@ document.addEventListener('click', function(ev){
   var t=ev.target;
   if(!t||!t.closest) return;
   var pp=t.closest('.armport');
-  if(pp){ ev.stopPropagation(); lnkOpenPatch(+pp.getAttribute('data-pp'), +pp.getAttribute('data-p')); return; }
+  if(pp){ ev.stopPropagation(); ev.stopImmediatePropagation(); lnkOpenPatch(+pp.getAttribute('data-pp'), +pp.getAttribute('data-p')); return; }
   var dp=t.closest('.devport');
-  if(dp){ ev.stopPropagation(); lnkOpenDev(dp.getAttribute('data-dp'), +dp.getAttribute('data-p')); return; }
+  if(dp){ ev.stopPropagation(); ev.stopImmediatePropagation(); lnkOpenDev(dp.getAttribute('data-dp'), +dp.getAttribute('data-p')); return; }
 });
 
 // ---------- configuracion del patch panel ----------
@@ -283,7 +283,8 @@ function traySave() {
     var t = ev.target.closest && ev.target.closest('[data-tray]');
     if (t) { ev.stopPropagation(); return; }
     var k = ev.target.closest && ev.target.closest('[data-kid]');
-    if (k) {
+    var esX = ev.target.classList && ev.target.classList.contains('cabxx');
+    if (k && esX) {
       ev.stopPropagation();
       var p = String(k.getAttribute('data-kid')).split(':');
       var rr = lnkRack(); var itm = rr && rr.items[+p[0]];
