@@ -10,7 +10,7 @@ const KEY='mapared.levante.v1';
 const IDXKEY='nmedit:index';
 const FRESH=JSON.parse(JSON.stringify(DATA));
 let doc, nodes=[], edges=[], byId={}, adj={}, zonas=[], hist=[];
-const state={editing:null,q:'',types:new Set(Object.keys(TYPE)),zona:'',red:'',labels:true,edges:true,hulls:true,showIp:true,
+const state={rackMode:'armario',editing:null,q:'',types:new Set(Object.keys(TYPE)),zona:'',red:'',labels:true,edges:true,hulls:true,showIp:true,
   sel:null,edit:false,linkMode:false,pending:null,view:'mapa',msel:new Set(),
   nets:new Set(),colorBy:'tipo',grid:true,snap:true,path:null,pathA:null,pathMode:false,elab:true,lockZones:false,rackOnly:true};
 
