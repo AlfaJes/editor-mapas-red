@@ -100,7 +100,7 @@ function yDeU(u0,h,uTotal,U){
 function portStrip(px1,px2,y,h,id){
   var cap=Math.min(24, capFor(id));
   var band=px2-px1;
-  var step=Math.min(12, band/cap);
+  var step=Math.min(16, band/cap);
   var totalW=step*cap;
   var px0=px1+(band-totalW)/2;
   var sh=Math.min(16, Math.max(6, h-8));
@@ -254,7 +254,7 @@ function renderArmarios(){
       // puertos
       var px0=X0+140, pfin=X0+WPP-86, huecoG=10;
       var pwFull=(pfin-px0-huecoG)/per;
-      var pw=Math.min(13,pwFull);
+      var pw=Math.min(18,pwFull);
       var blockW=pw*per+huecoG;
       var ox=px0+Math.max(0,(pfin-px0-blockW)/2);
       var rowH=(hh-4)/filas, stripH=7;
