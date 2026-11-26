@@ -471,8 +471,11 @@ export function showDetail(){
             <option value="">— sin categoría —</option>
             ${cabCats().map(function(c){return '<option value="'+escAttr(c.n)+'"'+(ed0.cat===c.n?' selected':'')+'>'+escAttr(c.n)+'</option>';}).join('')}
           </select></dd>
-          <dt>Color</dt><dd><input type="color" id="e_col" value="${ed0.color||'#6ea8ff'}"
-             style="width:34px;height:20px;border:none;background:none;padding:0"></dd>
+          <dt>Color</dt><dd style="display:flex;align-items:center;gap:6px">
+            <input type="color" id="e_col" value="${ed0.color||'#6ea8ff'}" title="Color propio del enlace (manda sobre red y categoría)"
+             style="width:34px;height:20px;border:none;background:none;padding:0">
+            ${ed0.color?`<button class="btn mini" id="e_colauto" title="Quitar el color propio y volver al de la red">✕ auto</button>`:`<span style="color:#7d93b3;font-size:10px">automático</span>`}
+          </dd>
           <dt>Trazado</dt><dd>${(Array.isArray(ed0.pts)&&ed0.pts.length)?ed0.pts.length+' punto'+(ed0.pts.length>1?'s':'')+' a mano':(S.doc.estyle||'curvo')}</dd>
           <dt>Etiqueta</dt><dd><input id="e_etq" value="${escAttr(ed0.etq)}" placeholder="1 Gbps fibra…"
              style="width:100%;background:#0c1626;border:1px solid #26374f;border-radius:5px;
@@ -527,6 +530,8 @@ export function showDetail(){
       };
       const cc=document.getElementById('e_col');
       if(cc)cc.oninput=ev=>{ed0.color=ev.target.value;save();render();};
+      const ca=document.getElementById('e_colauto');
+      if(ca)ca.onclick=()=>{delete ed0.color;snap();save();render();showDetail();};
       const eq=document.getElementById('e_etq');
       if(eq){eq.oninput=ev=>{ed0.etq=ev.target.value;save();render();};}
       const hb=document.getElementById('e_hide'); if(hb)hb.onclick=()=>{ed0.hide=!ed0.hide;save();render();showDetail();};

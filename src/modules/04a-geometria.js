@@ -161,11 +161,13 @@ export function segMid(anch,i,hasPts,e){
 
 export function cabCats(){ if(!Array.isArray(S.doc.cabcats)||!S.doc.cabcats.length){ S.doc.cabcats=[{n:'Fibra',col:'#22d3ee'},{n:'Cobre',col:'#94a3b8'},{n:'Inalambrico',col:'#f472b6'},{n:'Troncal',col:'#fbbf24'}]; } return S.doc.cabcats; }
 export function cabColor(e){ if(!e)return '';
+  // el color elegido a mano en el enlace manda sobre red y categoria
+  if(e.color) return e.color;
   if(e.net){ var c=(S.doc.redes||[]).filter(function(x){return x.n===e.net;})[0]; if(c)return c.col; }
   var A=S.byId[e.s], B=S.byId[e.t];
   if(A&&B){ var sa=(A.nets||[]), sb=(B.nets||[]);
     for(var i=0;i<sa.length;i++){ if(sb.indexOf(sa[i])>=0){ var cc=(S.doc.redes||[]).filter(function(x){return x.n===sa[i];})[0]; if(cc)return cc.col; } } }
-  return e.color||''; }
+  return ''; }
 export function edgeD(a,b,e){
   var P=(e&&Array.isArray(e.pts))?e.pts:[];
   var st=S.doc.estyle||'curvo';
