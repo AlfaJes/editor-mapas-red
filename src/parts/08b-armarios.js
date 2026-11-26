@@ -128,7 +128,7 @@ function renderArmarios(){
     '<button class="btn sm" id="rkpng2" title="Descargar en PNG">⤓ PNG</button>'+
     '</div>';
 
-  var U=30, uTot=r.u, H=26+uTot*U+18, X0=64, W=620, Wtot=780;
+  var U=42, uTot=r.u, H=26+uTot*U+18, X0=64, W=680, Wtot=860;
   var s='<div class="cabwrap"><svg class="cabsvg armcab" data-rid="'+r.id+'" viewBox="0 0 '+Wtot+' '+H+'" width="100%" xmlns="http://www.w3.org/2000/svg">';
   s+='<rect x="8" y="8" width="'+(Wtot-16)+'" height="'+(H-16)+'" rx="10" fill="#0d1626" stroke="#243350"/>';
   for(var i=0;i<uTot;i++){
@@ -450,7 +450,7 @@ function bindArmarios(){
         var svgEl=g.ownerSVGElement||document.querySelector('.cabsvg');
         var esc=1;
         try{ esc=svgEl.getBoundingClientRect().width/(svgEl.viewBox.baseVal.width||830); }catch(e){}
-        var Upx=Math.max(8,30*(esc||1));
+        var Upx=Math.max(10,42*(esc||1));
         var pasos=Math.round((e2.clientY-y0)/Upx);
         var nuevo=Math.max(1,Math.min(r.u-(it.u||1)+1, u0-pasos));
         if(nuevo===u0)return;
