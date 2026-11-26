@@ -240,7 +240,9 @@ function trayOpen(idx) {
   var libre = trayLibres(it);
   var hs = document.getElementById('trm_h');
   hs.innerHTML = '';
-  for (var k = 1; k <= Math.max(1, libre); k++) hs.innerHTML += '<option value="' + k + '">' + k + ' U</option>';
+  if (libre > 0) { for (var k = 1; k <= libre; k++) hs.innerHTML += '<option value="' + k + '">' + k + ' U</option>'; }
+  else { hs.innerHTML = '<option value="">—</option>'; }
+  hs.disabled = !libre;
   document.getElementById('trm_libre').textContent = libre
     ? 'Quedan ' + libre + ' U libres en la bandeja (no cambia de altura).'
     : 'La bandeja está llena. Quita algún equipo o sube su altura con la «U» de la cabecera.';
