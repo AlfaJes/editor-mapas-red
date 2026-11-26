@@ -7,7 +7,7 @@ import { mineOn, pathHint, portGrid, render, renderList, select, v } from './04b
 import { addLink, delLink, delNode, saveEdit } from './05-mutaciones.js';
 import { setBtn } from './07-ui.js';
 import { openEdgeNote } from './10d-guardado-notas.js';
-import { lnkOpenDev } from './08c-conexiones.js';
+import { egOpen, lnkOpenDev } from './08c-conexiones.js';
 import { t } from './dom.js';
 export function readHTML(n){
   const nb=[...S.adj[n.id]].map(x=>{
@@ -481,6 +481,7 @@ export function showDetail(){
              color:#dbe9ff;font:inherit;font-size:11px;padding:2px 5px"></dd>
         </dl>
         <div class="frow" style="display:flex;gap:8px;margin-top:6px">
+          <button class="btn on" id="e_cheg" title="Cambiar los equipos o los puertos de este enlace">⇄ Cambiar equipos</button>
           <button class="btn" id="e_bend">Quitar curva</button>
           <button class="btn" id="e_clean" title="Quita los puntos que ya no doblan el cable">Limpiar puntos</button>
           <button class="btn" id="e_hide">${ed0.hide?'Mostrar':'Ocultar'}</button>
@@ -531,6 +532,7 @@ export function showDetail(){
       const eq=document.getElementById('e_etq');
       if(eq){eq.oninput=ev=>{ed0.etq=ev.target.value;save();render();};}
       const hb=document.getElementById('e_hide'); if(hb)hb.onclick=()=>{ed0.hide=!ed0.hide;save();render();showDetail();};
+      const cheg=document.getElementById('e_cheg'); if(cheg)cheg.onclick=()=>egOpen(ed0.s,ed0.t);
       const bb=document.getElementById('e_bend'); if(bb)bb.onclick=()=>{ed0.pts=[];delete ed0.bx;delete ed0.by;save();render();showDetail();};
       const dl=document.getElementById('e_dellink'); if(dl)dl.onclick=()=>{
         if(!confirm('\u00bfEliminar el enlace entre '+A.nombre+' y '+B.nombre+'?'))return;
@@ -607,8 +609,8 @@ export function showDetail(){
     d.querySelectorAll('.hitem').forEach(el=>el.onclick=()=>select(el.dataset.id,true));
     d.querySelectorAll('[data-chg]').forEach(el=>el.onclick=(ev)=>{
       ev.stopPropagation();
-      var p=parseInt(el.getAttribute('data-chg'),10)||0;
-      if(p) lnkOpenDev(n.id,p); else select(el.closest('.hitem').dataset.id,true);
+      var otro=el.closest('.hitem').dataset.id;
+      if(otro) egOpen(n.id,otro); else select(otro,true);
     });
     d.querySelectorAll('.pcell.on').forEach(el=>el.onclick=()=>select(el.dataset.id,true));
     d.querySelectorAll('.plist .prowC').forEach(el=>el.onclick=(ev)=>{ if(ev.target&&(ev.target.tagName==='SELECT'||ev.target.tagName==='OPTION'))return; if(el.dataset.id)select(el.dataset.id,true); });

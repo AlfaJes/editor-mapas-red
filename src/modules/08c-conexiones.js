@@ -1,6 +1,6 @@
 import { S } from './00-store.js';
 import { TYPE, state } from './01-base.js';
-import { capFor, hostOf, rebuild, save, syncRackPort } from './02-modelo.js';
+import { capFor, hostOf, rebuild, save, snap, syncRackPort } from './02-modelo.js';
 import { cabColor, col } from './04a-geometria.js';
 import { render, renderList, v } from './04b-render-mapa.js';
 import { escAttr, showDetail } from './04c-ficha-formularios.js';
@@ -425,3 +425,94 @@ export function ppDropNode(it){
   S.doc.edges=S.doc.edges.filter(function(e){return e.s!==it.nid&&e.t!==it.nid;});
   it.nid=null; rebuild();
 }
+
+// ---------- editor de enlace completo (equipo A + puerto A  <->  equipo B + puerto B) ----------
+S.EG = { s: null, t: null };
+
+function egEdgeOf(s, t) {
+  return S.doc.edges.filter(function (e) {
+    return (e.s === s && e.t === t) || (e.s === t && e.t === s);
+  })[0] || null;
+}
+function egFillDevs() {
+  var cur = { a: document.getElementById('eg_a').value, b: document.getElementById('eg_b').value };
+  ['a', 'b'].forEach(function (side) {
+    var sel = document.getElementById('eg_' + side);
+    var other = side === 'a' ? document.getElementById('eg_b').value : document.getElementById('eg_a').value;
+    var keep = cur[side];
+    sel.innerHTML = S.nodes.slice().sort(function (x, y) { return x.nombre.localeCompare(y.nombre, 'es'); })
+      .map(function (n) {
+        var dis = (n.id === other) ? ' disabled' : '';
+        return '<option value="' + n.id + '"' + (n.id === keep ? ' selected' : '') + dis + '>' + escAttr(n.nombre) + '</option>';
+      }).join('');
+  });
+}
+function egFillPorts(side) {
+  var sel = document.getElementById('eg_p' + side);
+  var id = document.getElementById('eg_' + side).value;
+  if (!id) { sel.innerHTML = ''; return; }
+  var cap = capFor(id), ocu = {}, ed = egEdgeOf(S.EG.s, S.EG.t);
+  S.doc.edges.forEach(function (e) {
+    if (e === ed) return;
+    if (e.s === id && e.pA) ocu[e.pA] = 1;
+    if (e.t === id && e.pB) ocu[e.pB] = 1;
+  });
+  var want = ed ? (ed.s === id ? ed.pA : (ed.t === id ? ed.pB : 0)) : 0;
+  var ops = '';
+  for (var p = 1; p <= cap; p++) {
+    ops += '<option value="' + p + '"' + (ocu[p] ? ' disabled' : '') + (p === want ? ' selected' : '')
+      + '>P' + p + (ocu[p] ? ' · ocupado' : '') + '</option>';
+  }
+  sel.innerHTML = ops;
+  if (!want) { // primer puerto libre
+    for (var i = 0; i < sel.options.length; i++) if (!sel.options[i].disabled) { sel.value = sel.options[i].value; break; }
+  }
+}
+export function egOpen(sId, tId) {
+  S.EG = { s: sId, t: tId };
+  var A = S.byId[sId], B = S.byId[tId];
+  var t = document.getElementById('eg_t'), sub = document.getElementById('eg_sub');
+  if (t) t.textContent = 'Cambiar conexión';
+  if (sub) sub.textContent = (A ? A.nombre : '?') + '  ⇄  ' + (B ? B.nombre : '?')
+    + '. Cambia el equipo o el puerto de cada extremo.';
+  var a = document.getElementById('eg_a'), b = document.getElementById('eg_b');
+  if (a) a.innerHTML = '<option value="' + sId + '">' + escAttr(A ? A.nombre : '?') + '</option>';
+  if (b) b.innerHTML = '<option value="' + tId + '">' + escAttr(B ? B.nombre : '?') + '</option>';
+  egFillDevs();
+  egFillPorts('a'); egFillPorts('b');
+  document.getElementById('egm').classList.add('on');
+}
+export function egClose() { document.getElementById('egm').classList.remove('on'); }
+export function egSave() {
+  var a = document.getElementById('eg_a').value, b = document.getElementById('eg_b').value;
+  var pa = parseInt(document.getElementById('eg_pa').value, 10) || 0;
+  var pb = parseInt(document.getElementById('eg_pb').value, 10) || 0;
+  if (!a || !b) { alert('Elige los dos equipos.'); return; }
+  if (a === b) { alert('Los dos extremos no pueden ser el mismo equipo.'); return; }
+  if (!pa || !pb) { alert('Elige los dos puertos.'); return; }
+  var old = egEdgeOf(S.EG.s, S.EG.t);
+  snap();
+  S.doc.edges = S.doc.edges.filter(function (e) {
+    if (e === old) return false;
+    return !((e.s === a && e.pA === pa) || (e.t === a && e.pB === pa) ||
+             (e.s === b && e.pA === pb) || (e.t === b && e.pB === pb));
+  });
+  var hs = hostOf(a, b);
+  var e2 = { s: a, t: b, h: hs.id, port: 0, pA: pa, pB: pb };
+  S.doc.edges.push(e2); try { syncRackPort(e2); } catch (_) {}
+  save(); rebuild(); render(); renderList(); renderArmarios(); showDetail(); egClose();
+}
+export function egDel() {
+  var old = egEdgeOf(S.EG.s, S.EG.t);
+  if (old) { snap(); S.doc.edges = S.doc.edges.filter(function (e) { return e !== old; }); }
+  save(); rebuild(); render(); renderList(); renderArmarios(); showDetail(); egClose();
+}
+(function () {
+  var ok = document.getElementById('eg_ok'); if (ok) ok.onclick = egSave;
+  var dl = document.getElementById('eg_del'); if (dl) dl.onclick = egDel;
+  var cx = document.getElementById('eg_cancel'); if (cx) cx.onclick = egClose;
+  ['a', 'b'].forEach(function (side) {
+    var d = document.getElementById('eg_' + side);
+    if (d) d.onchange = function () { egFillDevs(); egFillPorts('a'); egFillPorts('b'); };
+  });
+})();
