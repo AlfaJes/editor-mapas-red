@@ -492,14 +492,40 @@ export function egSave() {
   if (!pa || !pb) { alert('Elige los dos puertos.'); return; }
   var old = egEdgeOf(S.EG.s, S.EG.t);
   snap();
+  // liberar los puertos nuevos si los ocupaba otro enlace
   S.doc.edges = S.doc.edges.filter(function (e) {
-    if (e === old) return false;
+    if (e === old) return true;
     return !((e.s === a && e.pA === pa) || (e.t === a && e.pB === pa) ||
              (e.s === b && e.pA === pb) || (e.t === b && e.pB === pb));
   });
-  var hs = hostOf(a, b);
-  var e2 = { s: a, t: b, h: hs.id, port: 0, pA: pa, pB: pb };
-  S.doc.edges.push(e2); try { syncRackPort(e2); } catch (_) {}
+  var keep = null, flip = false;
+  if (old) {
+    var oS = old.s, oT = old.t;
+    if (a === oS && b === oT) { keep = old; }
+    else if (a === oT && b === oS) { keep = old; flip = true; }
+    else if (a === oS) { keep = old; }          // cambia el extremo t
+    else if (b === oT) { keep = old; }          // cambia el extremo s
+    else if (a === oT) { keep = old; flip = true; }  // A tenia el extremo t: se da la vuelta
+    else if (b === oS) { keep = old; flip = true; }
+  }
+  if (keep) {
+    // se conserva el trazado (puntos, color, etiqueta...) y solo cambia (o se mueve) el extremo
+    if (flip && Array.isArray(keep.pts) && keep.pts.length) keep.pts = keep.pts.slice().reverse();
+    if (flip) { keep.s = b; keep.t = a; keep.pA = pb; keep.pB = pa; }
+    else { keep.s = a; keep.t = b; keep.pA = pa; keep.pB = pb; }
+    var hsk = hostOf(a, b); keep.h = hsk.id;
+    try { syncRackPort(keep); } catch (_) {}
+  } else {
+    var hs = hostOf(a, b);
+    var e2 = { s: a, t: b, h: hs.id, port: 0, pA: pa, pB: pb };
+    if (old) { // los dos extremos son nuevos: se copian color, categoria y etiqueta
+      if (old.color) e2.color = old.color;
+      if (old.cat) e2.cat = old.cat;
+      if (old.etq) e2.etq = old.etq;
+      if (old.net) e2.net = old.net;
+    }
+    S.doc.edges.push(e2); try { syncRackPort(e2); } catch (_) {}
+  }
   save(); rebuild(); render(); renderList(); renderArmarios(); showDetail(); egClose();
 }
 export function egDel() {

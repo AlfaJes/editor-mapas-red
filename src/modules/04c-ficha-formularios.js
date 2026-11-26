@@ -44,10 +44,7 @@ export function readHTML(n){
    <div class="hist"><h4>ENLACES (${nb.length})</h4>
      ${nb.length?nb.map(x=>`<div class="hitem" data-id="${x.id}" style="display:flex;justify-content:space-between;align-items:center;gap:8px">
        <span>${x.nombre}</span>
-       <span style="display:flex;align-items:center;gap:6px">
-         <span style="color:#7d93b3">${x.port?'P'+x.port:''}</span>
-         <button class="btn sm" data-chg="${x.port}" title="Cambiar la conexión de este puerto">⇄</button>
-       </span></div>`).join('')
+       <span style="color:#7d93b3">${x.port?'P'+x.port:''}</span></div>`).join('')
        :'<div class="empty" style="padding:6px 0">Sin enlaces definidos</div>'}
    </div>
    <button class="btn" id="e_start" style="margin-top:10px;width:100%">✎ Editar este equipo</button>`;
@@ -435,6 +432,7 @@ export function formHTML(n){
   <div class="hist"><h4>ENLACES (${links.length})</h4>
     ${links.map(l=>`<div class="lrow"><span>${l.o?l.o.nombre:'?'}</span>
       <b>${l.o?(TYPE[l.o.tipo]||['',''])[1]:''}</b>
+      <button class="btn mini" data-eg="${l.o?l.o.id:''}" title="Cambiar a qué equipo y puerto va esta conexión">⇄</button>
       <button class="x" data-s="${l.s}" data-t="${l.t}">✕</button></div>`).join('')||'<div class="empty" style="padding:6px 0">Sin enlaces</div>'}
     <div class="ladd"><select id="e_lsel"><option value="">— conectar con —</option>
       ${S.nodes.filter(x=>x.id!==n.id).sort((a,b)=>a.nombre.localeCompare(b.nombre,'es'))
@@ -481,7 +479,7 @@ export function showDetail(){
              color:#dbe9ff;font:inherit;font-size:11px;padding:2px 5px"></dd>
         </dl>
         <div class="frow" style="display:flex;gap:8px;margin-top:6px">
-          <button class="btn on" id="e_cheg" title="Cambiar los equipos o los puertos de este enlace">⇄ Cambiar equipos</button>
+          ${state.edit?`<button class="btn on" id="e_cheg" title="Cambiar los equipos o los puertos de este enlace">⇄ Cambiar equipos</button>`:''}
           <button class="btn" id="e_bend">Quitar curva</button>
           <button class="btn" id="e_clean" title="Quita los puntos que ya no doblan el cable">Limpiar puntos</button>
           <button class="btn" id="e_hide">${ed0.hide?'Mostrar':'Ocultar'}</button>
@@ -590,6 +588,7 @@ export function showDetail(){
     document.getElementById('e_save').onclick=()=>saveEdit(n.id);
     document.getElementById('e_del').onclick=()=>delNode(n.id);
     d.querySelectorAll('.x').forEach(b=>b.onclick=()=>delLink(b.dataset.s,b.dataset.t));
+    d.querySelectorAll('[data-eg]').forEach(b=>b.onclick=()=>{var o=b.getAttribute('data-eg');if(o)egOpen(n.id,o);});
     var ipb=document.getElementById('e_ipadd');
     if(ipb)ipb.onclick=function(){var t=document.getElementById('e_ip');
       t.value=(t.value.trim()?t.value.replace(/\s+$/,'')+'\n':''); t.focus();};
