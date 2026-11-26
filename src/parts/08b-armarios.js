@@ -99,7 +99,10 @@ function yDeU(u0,h,uTotal,U){
 
 function portStrip(px1,px2,y,h,id){
   var cap=Math.min(24, capFor(id));
-  var step=(px2-px1)/cap;
+  var band=px2-px1;
+  var step=Math.min(12, band/cap);
+  var totalW=step*cap;
+  var px0=px1+(band-totalW)/2;
   var sh=Math.min(16, Math.max(6, h-8));
   var stripH=7;
   var ty=y+Math.max(0,(h-sh-stripH)/2);
@@ -107,13 +110,13 @@ function portStrip(px1,px2,y,h,id){
   for(var q=1;q<=cap;q++){
     var e=doc.edges.filter(function(x){return (x.s===id&&x.pA===q)||(x.t===id&&x.pB===q);})[0];
     var lc=e?(cabColor(e)||'#4f8cff'):'';
-    var bx=px1+(q-1)*step;
+    var bx=px0+(q-1)*step;
     var w=Math.max(3,step-1.8);
     s+='<rect class="devport'+(e?' on':'')+'" data-dp="'+id+'" data-p="'+q+'" x="'+(bx+0.9).toFixed(1)+'" y="'+(ty).toFixed(1)+'" width="'+w.toFixed(1)+'" height="'+sh.toFixed(1)+'" rx="1.2"'+(e?' style="fill:'+lc+'"':'')+'><title>P'+q+(e?' (ocupado)':' (libre)')+'</title></rect>';
   }
-  s+='<rect x="'+(px1-2)+'" y="'+(ty+sh).toFixed(1)+'" width="'+(px2-px1+4)+'" height="'+stripH+'" rx="1" fill="#c9d4e2" opacity=".9" pointer-events="none"/>';
+  s+='<rect x="'+(px0-2)+'" y="'+(ty+sh).toFixed(1)+'" width="'+(totalW+4)+'" height="'+stripH+'" rx="1" fill="#c9d4e2" opacity=".9" pointer-events="none"/>';
   for(var q2=1;q2<=cap;q2++){
-    var bx2=px1+(q2-1)*step;
+    var bx2=px0+(q2-1)*step;
     s+='<text x="'+(bx2+step/2).toFixed(1)+'" y="'+(ty+sh+5.2).toFixed(1)+'" class="cabpn2" text-anchor="middle" pointer-events="none">'+q2+'</text>';
   }
   return s;
@@ -250,23 +253,25 @@ function renderArmarios(){
       s+='<text class="cabxx" data-del="'+idx+'" x="'+(X0+WPP-12)+'" y="'+cy+'" text-anchor="end" title="Quitar">✕</text>';
       // puertos
       var px0=X0+140, pfin=X0+WPP-86, huecoG=10;
-      var pw=(pfin-px0-huecoG)/per;
+      var pwFull=(pfin-px0-huecoG)/per;
+      var pw=Math.min(13,pwFull);
+      var blockW=pw*per+huecoG;
+      var ox=px0+Math.max(0,(pfin-px0-blockW)/2);
       var rowH=(hh-4)/filas, stripH=7;
       var sockH=Math.max(7,Math.min(16,rowH-stripH-2));
       for(var p=1;p<=total;p++){
         var r2=Math.floor((p-1)/per), c=(p-1)%per;
         var ry=y+2+r2*rowH + (rowH-sockH-stripH-2)/2;
         if(c===0){
-          s+='<rect x="'+px0+'" y="'+(ry+sockH+1).toFixed(1)+'" width="'+(pfin-px0)+'" height="'+stripH+'" rx="1" fill="#c9d4e2" opacity=".92"/>';
+          s+='<rect x="'+ox+'" y="'+(ry+sockH+1).toFixed(1)+'" width="'+blockW+'" height="'+stripH+'" rx="1" fill="#c9d4e2" opacity=".92"/>';
         }
         var lk=(it.links&&it.links[p])||null;
         var lcol=lk?(linkColor(lk)||'#4f8cff'):'';
-        var bx2=px0+c*pw+(c>=Math.ceil(per/2)?huecoG:0);
+        var bx2=ox+c*pw+(c>=Math.ceil(per/2)?huecoG:0);
         var w2=Math.max(4,pw-2.6);
         s+='<rect class="armport'+(lk?' on':'')+'" data-pp="'+idx+'" data-p="'+p+'" x="'+(bx2+1.2).toFixed(1)+'" y="'+ry.toFixed(1)+'" width="'+w2.toFixed(1)+'" height="'+sockH.toFixed(1)+'" rx="1.6"'+
            (lk?' style="fill:'+lcol+';fill-opacity:.9;stroke:'+lcol+'"':'')+
            '><title>Puerto '+p+(lk?(' → '+lk.dev+' P'+lk.port):' (libre)')+'</title></rect>';
-        s+='<text x="'+(bx2+pw/2-1.2).toFixed(1)+'" y="'+(ry+sockH+stripH-1.4).toFixed(1)+'" class="cabpn2" text-anchor="middle">'+p+'</text>';
         s+='<text x="'+(bx2+pw/2-1.2).toFixed(1)+'" y="'+(ry+sockH+stripH-1.4).toFixed(1)+'" class="cabpn2" text-anchor="middle">'+p+'</text>';
       }
       s+='</g>';
