@@ -209,3 +209,63 @@ document.addEventListener('click', function(ev){
   var c = t.closest('[data-cfg]');
   if (c) { ev.stopPropagation(); ppOpen(+c.getAttribute('data-cfg')); }
 }, true);
+
+// ---------- equipos dentro de una bandeja ----------
+function trayDisp(r) {
+  var usados = {};
+  r.items.forEach(function (it) {
+    if (it.k === 'dev' && it.id) usados[it.id] = 1;
+    (it.kids || []).forEach(function (k) { if (k.id) usados[k.id] = 1; });
+  });
+  return nodes.filter(function (n) { return !usados[n.id]; });
+}
+function trayOpen(idx) {
+  var r = lnkRack(); if (!r) return;
+  var it = r.items[idx]; if (!it) return;
+  PPX.tray = idx;
+  var sel = document.getElementById('trm_dev');
+  var lib = trayDisp(r);
+  sel.innerHTML = lib.map(function (n) {
+    return '<option value="' + n.id + '">' + (n.nombre || '(sin nombre)') + ' — ' + ((TYPE[n.tipo] || ['', ''])[1] || n.tipo) + '</option>';
+  }).join('') || '<option value="">(no quedan equipos sin colocar)</option>';
+  document.getElementById('trm_h').value = String(it.acc === 'bandeja2' ? 2 : 1);
+  document.getElementById('trm').classList.add('on');
+}
+function trayClose() { document.getElementById('trm').classList.remove('on'); }
+function traySave() {
+  var r = lnkRack(); if (!r) return;
+  var it = r.items[PPX.tray]; if (!it) return trayClose();
+  var id = document.getElementById('trm_dev').value;
+  var h = Math.max(1, parseInt(document.getElementById('trm_h').value) || 1);
+  if (!id) { alert('No queda ningun equipo sin colocar en este armario.'); return; }
+  it.kids = it.kids || [];
+  it.kids.push({ id: id, h: h });
+  var viejo = it.u;
+  var t = 1; it.kids.forEach(function (k) { t += Math.max(1, parseInt(k.h) || 1); });
+  it.u = t;
+  if (it.u0 + it.u - 1 > r.u) { it.u0 = Math.max(1, r.u - it.u + 1); }
+  if (it.u > r.u || colision(r, it)) { it.kids.pop(); it.u = viejo; alert('No cabe: sube el armario de U o quita algo de encima.'); return; }
+  save(); renderArmarios(); trayClose();
+}
+(function () {
+  var ok = document.getElementById('trm_ok'); if (!ok) return;
+  ok.onclick = traySave;
+  document.getElementById('trm_cancel').onclick = trayClose;
+  document.getElementById('trm').addEventListener('click', function (e) { if (e.target.id === 'trm') trayClose(); });
+  document.addEventListener('click', function (ev) {
+    var t = ev.target.closest && ev.target.closest('[data-tray]');
+    if (t) { ev.stopPropagation(); trayOpen(+t.getAttribute('data-tray')); return; }
+    var k = ev.target.closest && ev.target.closest('[data-kid]');
+    if (k) {
+      ev.stopPropagation();
+      var p = String(k.getAttribute('data-kid')).split(':');
+      var rr = lnkRack(); var itm = rr && rr.items[+p[0]];
+      if (itm && itm.kids && itm.kids[+p[1]]) {
+        itm.kids.splice(+p[1], 1);
+        var t2 = 1; itm.kids.forEach(function (x) { t2 += Math.max(1, parseInt(x.h) || 1); });
+        itm.u = itm.kids.length ? t2 : 1;
+        save(); renderArmarios();
+      }
+    }
+  });
+})();

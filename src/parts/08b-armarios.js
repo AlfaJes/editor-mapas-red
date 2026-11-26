@@ -70,6 +70,10 @@ function rackOcupados(r,skip){
   var m={};
   r.items.forEach(function(it){
     if(it===skip)return;
+    if(it.k==='acc' && Array.isArray(it.kids) && it.kids.length){
+      var _t=1; it.kids.forEach(function(k){ _t+=Math.max(1,parseInt(k.h)||1); });
+      it.u=_t;
+    }
     var h=Math.max(1,parseInt(it.u)||1);
     for(var k=0;k<h;k++) m[(it.u0||1)+k]=it;
   });
@@ -92,7 +96,8 @@ function renderArmarios(){
   var opts=doc.racks.map(function(x){
     return '<option value="'+x.id+'"'+(x.id===r.id?' selected':'')+'>'+escAttr(x.n)+' ('+x.u+'U)</option>';
   }).join('');
-  var libres=nodes.filter(function(n){ return !r.items.some(function(it){return it.k==='dev'&&it.id===n.id;}); });
+  var _us={}; r.items.forEach(function(it){ if(it.k==='dev'&&it.id)_us[it.id]=1; (it.kids||[]).forEach(function(k){ if(k.id)_us[k.id]=1; }); });
+  var libres=nodes.filter(function(n){ return !_us[n.id]; });
   var selDev='<select id="armadd" class="rkz"><option value="">+ Equipo…</option>'+
     libres.slice().sort(function(a,b){return a.nombre.localeCompare(b.nombre,'es');})
       .map(function(n){return '<option value="'+n.id+'">'+escAttr(n.nombre)+'</option>';}).join('')+'</select>';
@@ -134,8 +139,29 @@ function renderArmarios(){
       s+='<rect x="'+X0+'" y="'+y+'" width="5" height="'+hh+'" rx="2" fill="'+(ac.col||'#64748b')+'"/>';
       s+='<text x="'+(X0+14)+'" y="'+(y+13)+'" class="cabn">'+escAttr(it.n||ac.n)+'</text>';
       s+='<text x="'+(X0+190)+'" y="'+(y+13)+'" class="cabs">accesorio</text>';
-      s+='<text class="armu" data-hu="'+idx+'" x="'+(X0+W-96)+'" y="'+(y+13)+'" title="Altura ('+(it.u||1)+'U). Clic para cambiarla.">'+(it.u||1)+'U</text>';
-      s+='<text class="cabxx" data-del="'+idx+'" x="'+(X0+W-8)+'" y="'+(y+13)+'" text-anchor="end">✕</text>';
+      s+='<text class="armu" data-hu="'+idx+'" x="'+(X0+W-26)+'" text-anchor="end" y="'+(y+13)+'" title="Altura ('+(it.u||1)+'U). Clic para cambiarla.">'+(it.u||1)+'U</text>';
+      s+='<text class="cabxx" data-del="'+idx+'" x="'+(X0+W-6)+'" y="'+(y+13)+'" text-anchor="end">✕</text>';
+      if(it.acc==='bandeja'||it.acc==='bandeja2'){
+        s+='<text class="armplus" data-tray="'+idx+'" x="'+(X0+W-60)+'" y="'+(y+13)+'" text-anchor="end" title="Anadir un equipo a esta bandeja">＋ equipo</text>';
+        var kids=it.kids||[], base=y+hh-6, cum=0;
+        kids.forEach(function(k,ki){
+          var nd=byId[k.id]; if(!nd)return;
+          var kh=Math.max(1,parseInt(k.h)||1)*U-2;
+          var ky=base-cum-kh-1;
+          s+='<g class="armkid" data-kid="'+idx+':'+ki+'">';
+          s+='<rect x="'+(X0+10)+'" y="'+ky+'" width="'+(W-20)+'" height="'+kh+'" rx="2" fill="#16233a" stroke="#3a5578"/>';
+          s+='<rect x="'+(X0+10)+'" y="'+ky+'" width="4" height="'+kh+'" rx="1.5" fill="'+(col(nd)||'#64748b')+'"/>';
+          s+='<text x="'+(X0+22)+'" y="'+(ky+kh/2+4)+'" class="cabn2">'+escAttr(String(nd.nombre||'').slice(0,24))+'</text>';
+          s+='<text x="'+(X0+200)+'" y="'+(ky+kh/2+4)+'" class="cabs">'+escAttr((TYPE[nd.tipo]||['',''])[1])+' · '+(k.h||1)+'U</text>';
+          s+='<text class="cabxx" data-kid="'+idx+':'+ki+'" x="'+(X0+W-16)+'" y="'+(ky+kh/2+4)+'" text-anchor="end">✕</text>';
+          s+='</g>';
+          cum+=kh+1;
+        });
+        s+='<rect x="'+(X0+6)+'" y="'+(y+hh-5)+'" width="'+(W-12)+'" height="4" rx="2" fill="#4a5b75"/>';
+        if(!kids.length){
+          s+='<text x="'+(X0+W/2)+'" y="'+(y+hh/2+2)+'" class="cabi" text-anchor="middle">bandeja vacia — pulsa "＋ equipo"</text>';
+        }
+      }
       s+='</g>';
     } else if(it.k==='pp'){
       var per=Math.max(6,Math.min(48,it.ppr||24));
