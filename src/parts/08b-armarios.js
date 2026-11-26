@@ -97,6 +97,28 @@ function yDeU(u0,h,uTotal,U){
   return {y:26+fila*U};
 }
 
+function portStrip(px1,px2,y,h,id){
+  var cap=Math.min(24, capFor(id));
+  var step=(px2-px1)/cap;
+  var sh=Math.min(16, Math.max(6, h-8));
+  var stripH=7;
+  var ty=y+Math.max(0,(h-sh-stripH)/2);
+  var s='';
+  for(var q=1;q<=cap;q++){
+    var e=doc.edges.filter(function(x){return (x.s===id&&x.pA===q)||(x.t===id&&x.pB===q);})[0];
+    var lc=e?(cabColor(e)||'#4f8cff'):'';
+    var bx=px1+(q-1)*step;
+    var w=Math.max(3,step-1.8);
+    s+='<rect class="devport'+(e?' on':'')+'" data-dp="'+id+'" data-p="'+q+'" x="'+(bx+0.9).toFixed(1)+'" y="'+(ty).toFixed(1)+'" width="'+w.toFixed(1)+'" height="'+sh.toFixed(1)+'" rx="1.2"'+(e?' style="fill:'+lc+'"':'')+'><title>P'+q+(e?' (ocupado)':' (libre)')+'</title></rect>';
+  }
+  s+='<rect x="'+(px1-2)+'" y="'+(ty+sh).toFixed(1)+'" width="'+(px2-px1+4)+'" height="'+stripH+'" rx="1" fill="#c9d4e2" opacity=".9" pointer-events="none"/>';
+  for(var q2=1;q2<=cap;q2++){
+    var bx2=px1+(q2-1)*step;
+    s+='<text x="'+(bx2+step/2).toFixed(1)+'" y="'+(ty+sh+5.2).toFixed(1)+'" class="cabpn2" text-anchor="middle" pointer-events="none">'+q2+'</text>';
+  }
+  return s;
+}
+
 function renderArmarios(){
   var wrap=document.getElementById('rack');
   if(!wrap)return;
@@ -179,24 +201,15 @@ function renderArmarios(){
           var kfs=Math.max(6,Math.min(10.5,kh-2.6));
           var kx=X0+12+cc*cw, ky=innerBot-(rr+1)*rh+(rh-kh)/2;
           s+='<g class="armkid" data-kid="'+idx+':'+ki+'">';
-          s+='<rect x="'+kx+'" y="'+ky+'" width="'+(cw-4)+'" height="'+kh+'" rx="2" fill="#16233a" stroke="#3a5578"><title>'+escAttr(nd.nombre)+' · '+escAttr((TYPE[nd.tipo]||['',''])[1])+' · '+(k.h||1)+'U</title></rect>';
+          s+='<rect x="'+kx+'" y="'+ky+'" width="'+(cw-4)+'" height="'+kh+'" fill="transparent"><title>'+escAttr(nd.nombre)+' · '+escAttr((TYPE[nd.tipo]||['',''])[1])+' · '+(k.h||1)+'U</title></rect>';
           s+='<rect x="'+kx+'" y="'+ky+'" width="4" height="'+kh+'" rx="1.5" fill="'+(col(nd)||'#64748b')+'"/>';
           var nmk=String(nd.nombre||'');
           var maxc=Math.max(6,Math.floor((cw-24)/6.2)); if(nmk.length>maxc)nmk=nmk.slice(0,maxc-1)+'…';
           s+='<text x="'+(kx+10)+'" y="'+(ky+kh/2+kfs/3)+'" class="cabn2" style="font-size:'+kfs.toFixed(1)+'px">'+escAttr(nmk)+'</text>';
           s+='<text class="cabxx" data-kid="'+idx+':'+ki+'" x="'+(kx+cw-12)+'" y="'+(ky+kh/2+3.2)+'" text-anchor="end" style="font-size:'+Math.max(7,Math.min(11,kh-2)).toFixed(1)+'px">✕</text>';
-          // puertos del equipo, si hay sitio
-          if(kh>=7 && cw>=110){
-            var kcap=Math.min(24,capFor(nd.id));
-            var ptk=Math.max(2.5,Math.min(5,kh-5.5));
-            var pkx=kx+cw*0.46, pk2=kx+cw-26, pst=Math.min(8,(pk2-pkx)/Math.max(1,kcap));
-            s+='<rect x="'+(pkx-2)+'" y="'+(ky+kh-ptk-1.4).toFixed(1)+'" width="'+((kcap*pst)+4).toFixed(1)+'" height="'+(ptk+1.6).toFixed(1)+'" rx="1.5" fill="#0b1524" opacity=".6" pointer-events="none"/>';
-            for(var qk=1;qk<=kcap;qk++){
-              var eused=doc.edges.filter(function(e){return (e.s===nd.id&&e.pA===qk)||(e.t===nd.id&&e.pB===qk);})[0];
-              s+='<rect class="devport'+(eused?' on':'')+'" data-dp="'+nd.id+'" data-p="'+qk+'" x="'+(pkx+(qk-1)*pst).toFixed(1)+'" y="'+(ky+kh-ptk-0.6).toFixed(1)+'" width="'+Math.max(1.6,pst-1).toFixed(1)+'" height="'+ptk.toFixed(1)+'" rx=".8"'+
-                 (eused?' style="fill:'+(cabColor(eused)||'#4f8cff')+'"':'')+
-                 '><title>P'+qk+(eused?' (ocupado)':' (libre)')+'</title></rect>';
-            }
+          // puertos numerados (mismo estilo que el patch), si hay sitio
+          if(kh>=24 && cw>=130){
+            s+=portStrip(kx+cw*0.46, kx+cw-26, ky+2, kh-4, nd.id);
           }
           s+='</g>';
         });
@@ -238,11 +251,11 @@ function renderArmarios(){
       // puertos
       var px0=X0+140, pfin=X0+WPP-86, huecoG=10;
       var pw=(pfin-px0-huecoG)/per;
-      var rowH=(hh-4)/filas, stripH=filas>1?8:7;
-      var sockH=Math.max(7,rowH-stripH-2);
+      var rowH=(hh-4)/filas, stripH=7;
+      var sockH=Math.max(7,Math.min(16,rowH-stripH-2));
       for(var p=1;p<=total;p++){
         var r2=Math.floor((p-1)/per), c=(p-1)%per;
-        var ry=y+2+r2*rowH;
+        var ry=y+2+r2*rowH + (rowH-sockH-stripH-2)/2;
         if(c===0){
           s+='<rect x="'+px0+'" y="'+(ry+sockH+1).toFixed(1)+'" width="'+(pfin-px0)+'" height="'+stripH+'" rx="1" fill="#c9d4e2" opacity=".92"/>';
         }
@@ -269,18 +282,8 @@ function renderArmarios(){
       var baseY=y+(hh>26?13:Math.min(hh-4,Math.round(hh/2+3.5)));
       // nombre a la izquierda, con hueco reservado
       s+='<text x="'+(X0+12)+'" y="'+baseY+'" class="cabn">'+escAttr(nm)+'<title>'+escAttr(n.nombre)+' · '+escAttr((TYPE[n.tipo]||['',''])[1])+'</title></text>';
-      // tira de puertos en su banda
-      var cap=Math.min(32,capFor(n.id));
-      var px1=X0+200, px2=X0+W-76, step=Math.min(9,(px2-px1)/Math.max(1,cap));
-      s+='<rect x="'+(px1-3)+'" y="'+(y+hh-11)+'" width="'+((cap*step)+5).toFixed(1)+'" height="9" rx="2" fill="#0b1524" opacity=".65" pointer-events="none"/>';
-      for(var q=1;q<=cap;q++){
-        var used=doc.edges.some(function(e){return (e.s===n.id&&e.pA===q)||(e.t===n.id&&e.pB===q);});
-        var edg=used?doc.edges.filter(function(e){return (e.s===n.id&&e.pA===q)||(e.t===n.id&&e.pB===q);})[0]:null;
-        var dcol=edg?(cabColor(edg)||'#4f8cff'):'';
-        s+='<rect class="devport'+(used?' on':'')+'" data-dp="'+n.id+'" data-p="'+q+'" x="'+(px1+(q-1)*step).toFixed(1)+'" y="'+(y+hh-9.5)+'" width="'+Math.max(2,step-1.6).toFixed(1)+'" height="6" rx="1"'+
-           (used?' style="fill:'+dcol+'"':'')+
-           '><title>P'+q+(used?' (ocupado)':' (libre)')+'</title></rect>';
-      }
+      // tira de puertos numerados (mismo estilo que el patch)
+      s+=portStrip(X0+200, X0+W-84, y+2, hh-4, n.id);
       // altura y quitar, en el margen derecho
       s+='<text class="armu" data-hu="'+idx+'" x="'+(X0+W-70)+'" y="'+baseY+'" title="Altura en U. Clic para cambiarla.">'+h+'U</text>';
       s+='<text class="cabxx" data-del="'+idx+'" x="'+(X0+W-14)+'" y="'+baseY+'" text-anchor="end" title="Quitar">✕</text>';
