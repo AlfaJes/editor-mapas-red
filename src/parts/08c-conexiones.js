@@ -294,3 +294,29 @@ function traySave() {
     }
   });
 })();
+
+// ---------- mover equipos dentro de la bandeja ----------
+(function () {
+  document.addEventListener('mousedown', function (ev) {
+    var g = ev.target.closest && ev.target.closest('.armkid');
+    if (!g || (ev.target.closest && ev.target.closest('.cabxx'))) return;
+    var pr = String(g.getAttribute('data-kid') || '').split(':');
+    var ii = +pr[0], from = +pr[1];
+    var r = lnkRack(); if (!r) return;
+    var it = r.items[ii]; if (!it || !it.kids || !it.kids[from]) return;
+    ev.preventDefault(); ev.stopPropagation();
+    var up = function (e2) {
+      document.removeEventListener('mouseup', up, true);
+      var el = document.elementFromPoint(e2.clientX, e2.clientY);
+      var t = el && el.closest ? el.closest('.armkid') : null;
+      if (!t) return;
+      var p2 = String(t.getAttribute('data-kid') || '').split(':');
+      if (+p2[0] !== ii) return;
+      var to = +p2[1]; if (to === from) return;
+      var k = it.kids.splice(from, 1)[0];
+      it.kids.splice(to, 0, k);
+      save(); renderArmarios();
+    };
+    document.addEventListener('mouseup', up, true);
+  }, true);
+})();

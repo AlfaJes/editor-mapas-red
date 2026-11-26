@@ -153,23 +153,23 @@ function renderArmarios(){
       s+='<rect x="'+X0+'" y="'+y+'" width="5" height="'+hh+'" rx="2" fill="'+(ac.col||'#64748b')+'"/>';
       var nk0=(it.kids||[]).length;
       var hdr='';
-      if(nk0<=2){
-        hdr+='<text x="'+(X0+14)+'" y="'+(y+13)+'" class="cabn">'+escAttr(it.n||ac.n)+'</text>';
-        hdr+='<text x="'+(X0+190)+'" y="'+(y+13)+'" class="cabs">accesorio</text>';
-      } else {
-        hdr+='<rect x="'+(X0+W-196)+'" y="'+(y+1)+'" width="194" height="12" rx="2" fill="#0f1b2e" opacity=".92"/>';
+      if(hh>=44){
+        hdr+='<rect x="'+(X0+1)+'" y="'+y+'" width="'+(W-2)+'" height="14" fill="#0f1b2e" opacity=".92" pointer-events="none"/>';
+        hdr+='<text x="'+(X0+10)+'" y="'+(y+11)+'" class="cabn" style="font-size:11px">'+escAttr(it.n||ac.n)+'</text>';
       }
-      hdr+='<text class="armu" data-hu="'+idx+'" x="'+(X0+W-26)+'" text-anchor="end" y="'+(y+13)+'" title="Altura fija ('+(it.u||1)+'U). Clic para cambiarla.">'+(it.u||1)+'U</text>';
-      hdr+='<text class="cabxx" data-del="'+idx+'" x="'+(X0+W-6)+'" y="'+(y+13)+'" text-anchor="end">✕</text>';
+      // controles en el margen derecho, fuera de la bandeja
+      var cx0=X0+W+10;
+      hdr+='<text class="armu" data-hu="'+idx+'" x="'+cx0+'" y="'+(y+11)+'" title="Altura fija ('+(it.u||1)+'U). Clic para cambiarla.">'+(it.u||1)+'U</text>';
+      hdr+='<text class="cabxx" data-del="'+idx+'" x="'+(X0+W-6)+'" y="'+(y+11)+'" text-anchor="end" title="Quitar la bandeja">✕</text>';
       if(it.acc==='bandeja'||it.acc==='bandeja2'){
         var _usada=0; (it.kids||[]).forEach(function(k){ _usada+=Math.max(1,parseInt(k.h)||1); });
         var _libre=Math.max(0,(it.u||1)-_usada);
         var plus='';
-        plus+='<rect class="armplusbox" data-tray="'+idx+'" x="'+(X0+W-158)+'" y="'+(y+2)+'" width="100" height="15" rx="3" fill="#12301f" stroke="#3f7a58" opacity=".9"/>';
-        plus+='<text class="armplus" data-tray="'+idx+'" x="'+(X0+W-62)+'" y="'+(y+13)+'" text-anchor="end" title="Anadir un equipo a esta bandeja">＋ equipo ('+(it.kids||[]).length+')</text>';
+        plus+='<rect class="armplusbox" data-tray="'+idx+'" x="'+(X0+W+8)+'" y="'+(y+hh-16)+'" width="84" height="14" rx="3" fill="#12301f" stroke="#3f7a58" opacity=".95"/>';
+        plus+='<text class="armplus" data-tray="'+idx+'" x="'+(X0+W+50)+'" y="'+(y+hh-6)+'" text-anchor="middle" style="font-size:9px" title="Anadir un equipo a esta bandeja">＋ equipo ('+(it.kids||[]).length+')</text>';
         var kids=it.kids||[];
         // reparto en rejilla: si no caben en una columna, se ponen en varias
-        var innerTop=y+(kids.length<=2?13:2), innerBot=y+hh-5;
+        var innerTop=y+((hh>=44)?16:3), innerBot=y+hh-5;
         var avail=Math.max(8,innerBot-innerTop);
         var maxRows=Math.max(1,Math.floor(avail/9));
         var cols=Math.max(1,Math.ceil(kids.length/maxRows));
