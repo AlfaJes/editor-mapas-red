@@ -55,9 +55,18 @@ export function lnkFillPorts(want) {
   var cap = lnkPortsOf(dev);
   var ocu = lnkOcupados(dev);
   var cur = (S.LN.kind === 'patch') ? null : (S.LN.port || null);
+  // enlace actual: su puerto en el equipo de destino no cuenta como ocupado,
+  // para poder conservarlo o moverlo a otro puerto
+  var curT = 0, curPartner = null;
+  if (S.LN.kind !== 'patch') {
+    var ed = S.doc.edges.filter(function (e) {
+      return (e.s === S.LN.nodeId && e.pA === cur) || (e.t === S.LN.nodeId && e.pB === cur);
+    })[0];
+    if (ed) { curPartner = ed.s === S.LN.nodeId ? ed.t : ed.s; curT = ed.s === S.LN.nodeId ? ed.pB : ed.pA; }
+  }
   var ops = '', libres = 0, sel2 = false;
   for (var p = 1; p <= cap; p++) {
-    var ocupado = ocu[p] && p !== cur;
+    var ocupado = ocu[p] && p !== cur && !(dev === curPartner && p === curT);
     if (!ocupado) libres++;
     ops += '<option value="' + p + '"' + (ocupado ? ' disabled' : '') + (p === want ? ' selected' : '') + '>P' + p + (ocupado ? ' · ocupado' : '') + '</option>';
     if (p === want) sel2 = true;
@@ -103,7 +112,17 @@ export function lnkClose() { document.getElementById('lnkm').classList.remove('o
 export function lnkSave() {
   var dev = document.getElementById('lnk_dev').value;
   var port = parseInt(document.getElementById('lnk_port').value, 10) || 0;
-  if (!dev || !port) { alert('Elige equipo y puerto.'); return; }
+  if (!dev) {
+    // sin equipo destino: si el puerto tenía enlace, se quita
+    var tenia = S.LN.kind === 'patch'
+      ? !!(lnkRack() && lnkRack().items[S.LN.idx] && (lnkRack().items[S.LN.idx].links || {})[S.LN.port])
+      : S.doc.edges.some(function (e) {
+          return (e.s === S.LN.nodeId && e.pA === S.LN.port) || (e.t === S.LN.nodeId && e.pB === S.LN.port);
+        });
+    if (tenia) lnkDelete(); else lnkClose();
+    return;
+  }
+  if (!port) { alert('Elige equipo y puerto.'); return; }
   var _o = document.getElementById('lnk_port').options[document.getElementById('lnk_port').selectedIndex];
   if (_o && _o.disabled) { alert('Ese puerto ya está ocupado. Elige otro.'); return; }
   var d = S.byId[dev]; if (!d) return;

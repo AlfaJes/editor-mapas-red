@@ -137,7 +137,18 @@ export function renderArmarios(){
   if(!wrap)return;
   armariosInit();
   var r=currentRack();
-  if(!r){ wrap.innerHTML='<div class="empty" style="padding:20px">Sin armarios</div>'; return; }
+  if(!r){
+    wrap.innerHTML='<div class="rkbar" style="display:flex;gap:6px;align-items:center;padding:8px">'
+      +'<button class="btn sm" id="rknew" title="Crear un armario">＋ Armario</button>'
+      +'<span style="color:#7d93b3;font-size:11px">Aún no hay armarios</span></div>';
+    var nw0=document.getElementById('rknew');
+    if(nw0)nw0.onclick=function(){
+      var id='rk'+Date.now().toString(36);
+      S.doc.racks.push({id:id,n:'Armario 1',u:42,items:[]});
+      state.rackId=id; save(); renderArmarios();
+    };
+    return;
+  }
 
   var opts=S.doc.racks.map(function(x){
     return '<option value="'+x.id+'"'+(x.id===r.id?' selected':'')+'>'+escAttr(x.n)+' ('+x.u+'U)</option>';

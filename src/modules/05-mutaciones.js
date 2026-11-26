@@ -29,7 +29,7 @@ export function saveEdit(id){
   const pr=readPorts('e'); if(pr){n.ports=pr;n.puertos=String(pr.length);}
   const nics=nicsRead('e_nics'); if(nics.length)n.nics=nics; else delete n.nics;
   save(); rebuild(); rebuildUI();
-  if(S.nodes.some(x=>!ZBOX.find(b=>b.z===x.zona)))layout();
+  if(S.nodes.some(x=>x.zona&&x.zona!=='Sin zona'&&!ZBOX.find(b=>b.z===x.zona)))layout();
   render(); renderList(); showDetail();
 }
 export function openModal(zona){
@@ -71,7 +71,14 @@ export function createFromModal(){
   if(tipo==='patch'&&!parseInt(n.puertos)){ n.puertos='24'; }
   const nicsm=nicsRead('m_nics'); if(nicsm.length)n.nics=nicsm;
   snap(); S.doc.nodes.push(n); save(); rebuild();
-  if(!ZBOX.find(b=>b.z===zona))layout();
+  if(zona&&zona!=='Sin zona'&&!ZBOX.find(b=>b.z===zona)){
+    // zona nueva: se le crea su recuadro debajo, sin recolocar el resto del mapa
+    var _maxY=ZBOX.length?Math.max.apply(null,ZBOX.map(function(b){return b.y+(b.h||150);})):0;
+    ZBOX.push({z:zona,x:0,y:_maxY+26,w:340,h:150});
+    S.doc.zpos=JSON.parse(JSON.stringify(ZBOX));
+    var _nb=ZBOX.find(b=>b.z===zona); if(_nb){n.nx=_nb.x+_nb.w/2;n.ny=_nb.y+_nb.h/2;}
+    save();
+  }
   rebuildUI(); state.sel=n.id; state.esel=null;
   if(!state.edit){state.edit=true;syncEdit();}
   closeModal(); render(); renderList(); showDetail(); centerOn(S.byId[n.id]);
