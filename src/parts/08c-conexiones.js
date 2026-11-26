@@ -211,24 +211,40 @@ document.addEventListener('click', function(ev){
 }, true);
 
 // ---------- equipos dentro de una bandeja ----------
-function trayDisp(r) {
-  var usados = {};
-  r.items.forEach(function (it) {
-    if (it.k === 'dev' && it.id) usados[it.id] = 1;
-    (it.kids || []).forEach(function (k) { if (k.id) usados[k.id] = 1; });
+// La bandeja NO cambia de altura: los equipos van dentro del hueco libre.
+function trayWhere(id) {
+  var out = null;
+  (doc.racks || []).forEach(function (r) {
+    r.items.forEach(function (it) {
+      if (it.k === 'dev' && it.id === id) out = { r: r, it: it };
+      (it.kids || []).forEach(function (k, ki) { if (k.id === id) out = { r: r, it: it, ki: ki }; });
+    });
   });
-  return nodes.filter(function (n) { return !usados[n.id]; });
+  return out;
+}
+function trayLibres(it) {
+  var usada = 0;
+  (it.kids || []).forEach(function (k) { usada += Math.max(1, parseInt(k.h) || 1); });
+  return Math.max(0, (it.u || 1) - usada);
 }
 function trayOpen(idx) {
   var r = lnkRack(); if (!r) return;
   var it = r.items[idx]; if (!it) return;
   PPX.tray = idx;
-  var sel = document.getElementById('trm_dev');
-  var lib = trayDisp(r);
-  sel.innerHTML = lib.map(function (n) {
-    return '<option value="' + n.id + '">' + (n.nombre || '(sin nombre)') + ' — ' + ((TYPE[n.tipo] || ['', ''])[1] || n.tipo) + '</option>';
-  }).join('') || '<option value="">(no quedan equipos sin colocar)</option>';
-  document.getElementById('trm_h').value = String(it.acc === 'bandeja2' ? 2 : 1);
+  var lib = nodes.slice().sort(function (a, b) { return String(a.nombre).localeCompare(String(b.nombre), 'es'); });
+  document.getElementById('trm_dev').innerHTML = lib.map(function (n) {
+    var w = trayWhere(n.id);
+    var donde = w ? (w.ki !== undefined ? ' · ya en ' + w.it.n : ' · ya en ' + w.r.n) : '';
+    return '<option value="' + n.id + '">' + (n.nombre || '(sin nombre)') + ' — ' + ((TYPE[n.tipo] || ['', ''])[1] || n.tipo) + donde + '</option>';
+  }).join('');
+  var libre = trayLibres(it);
+  var hs = document.getElementById('trm_h');
+  hs.innerHTML = '';
+  for (var k = 1; k <= Math.max(1, libre); k++) hs.innerHTML += '<option value="' + k + '">' + k + ' U</option>';
+  document.getElementById('trm_libre').textContent = libre
+    ? 'Quedan ' + libre + ' U libres en la bandeja (no cambia de altura).'
+    : 'La bandeja está llena. Quita algún equipo o sube su altura con la «U» de la cabecera.';
+  document.getElementById('trm_ok').disabled = !libre;
   document.getElementById('trm').classList.add('on');
 }
 function trayClose() { document.getElementById('trm').classList.remove('on'); }
@@ -237,14 +253,17 @@ function traySave() {
   var it = r.items[PPX.tray]; if (!it) return trayClose();
   var id = document.getElementById('trm_dev').value;
   var h = Math.max(1, parseInt(document.getElementById('trm_h').value) || 1);
-  if (!id) { alert('No queda ningun equipo sin colocar en este armario.'); return; }
+  if (!id) { alert('Elige un equipo.'); return; }
+  var libre = trayLibres(it);
+  if (h > libre) { alert('No cabe: la bandeja tiene ' + libre + ' U libres y el equipo ocupa ' + h + 'U.'); return; }
+  // si ya estaba colocado en otro sitio, se mueve aquí
+  var w = trayWhere(id);
+  if (w) {
+    if (w.ki !== undefined) w.it.kids.splice(w.ki, 1);
+    else w.r.items = w.r.items.filter(function (x) { return !(x.k === 'dev' && x.id === id); });
+  }
   it.kids = it.kids || [];
   it.kids.push({ id: id, h: h });
-  var viejo = it.u;
-  var t = 1; it.kids.forEach(function (k) { t += Math.max(1, parseInt(k.h) || 1); });
-  it.u = t;
-  if (it.u0 + it.u - 1 > r.u) { it.u0 = Math.max(1, r.u - it.u + 1); }
-  if (it.u > r.u || colision(r, it)) { it.kids.pop(); it.u = viejo; alert('No cabe: sube el armario de U o quita algo de encima.'); return; }
   save(); renderArmarios(); trayClose();
 }
 (function () {
@@ -262,8 +281,6 @@ function traySave() {
       var rr = lnkRack(); var itm = rr && rr.items[+p[0]];
       if (itm && itm.kids && itm.kids[+p[1]]) {
         itm.kids.splice(+p[1], 1);
-        var t2 = 1; itm.kids.forEach(function (x) { t2 += Math.max(1, parseInt(x.h) || 1); });
-        itm.u = itm.kids.length ? t2 : 1;
         save(); renderArmarios();
       }
     }

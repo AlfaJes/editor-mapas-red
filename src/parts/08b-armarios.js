@@ -70,10 +70,6 @@ function rackOcupados(r,skip){
   var m={};
   r.items.forEach(function(it){
     if(it===skip)return;
-    if(it.k==='acc' && Array.isArray(it.kids) && it.kids.length){
-      var _t=1; it.kids.forEach(function(k){ _t+=Math.max(1,parseInt(k.h)||1); });
-      it.u=_t;
-    }
     var h=Math.max(1,parseInt(it.u)||1);
     for(var k=0;k<h;k++) m[(it.u0||1)+k]=it;
   });
@@ -142,7 +138,9 @@ function renderArmarios(){
       s+='<text class="armu" data-hu="'+idx+'" x="'+(X0+W-26)+'" text-anchor="end" y="'+(y+13)+'" title="Altura ('+(it.u||1)+'U). Clic para cambiarla.">'+(it.u||1)+'U</text>';
       s+='<text class="cabxx" data-del="'+idx+'" x="'+(X0+W-6)+'" y="'+(y+13)+'" text-anchor="end">✕</text>';
       if(it.acc==='bandeja'||it.acc==='bandeja2'){
-        s+='<text class="armplus" data-tray="'+idx+'" x="'+(X0+W-60)+'" y="'+(y+13)+'" text-anchor="end" title="Anadir un equipo a esta bandeja">＋ equipo</text>';
+        var _usada=0; (it.kids||[]).forEach(function(k){ _usada+=Math.max(1,parseInt(k.h)||1); });
+        var _libre=Math.max(0,(it.u||1)-_usada);
+        s+='<text class="armplus" data-tray="'+idx+'" x="'+(X0+W-60)+'" y="'+(y+13)+'" text-anchor="end" title="Anadir un equipo a esta bandeja">＋ equipo ('+_libre+'U libre'+( _libre===1?'':'s')+')</text>';
         var kids=it.kids||[], base=y+hh-6, cum=0;
         kids.forEach(function(k,ki){
           var nd=byId[k.id]; if(!nd)return;
