@@ -75,7 +75,7 @@ function delNode(id){
   doc.nodes=doc.nodes.filter(x=>x.id!==id);
   doc.edges=doc.edges.filter(e=>e.s!==id&&e.t!==id);
   if(state.sel===id)state.sel=null;
-  save(); rebuild(); layout(); rebuildUI(); render(); renderList(); showDetail();
+  save(); rebuild(); rebuildUI(); render(); renderList(); showDetail();
 }
 function addLink(a,b){
   if(!a||!b||a===b||!byId[a]||!byId[b])return;

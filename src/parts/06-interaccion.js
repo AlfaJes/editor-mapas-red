@@ -243,7 +243,7 @@ document.addEventListener('keydown',e=>{
       doc.nodes=doc.nodes.filter(x=>ids.indexOf(x.id)<0);
       doc.edges=doc.edges.filter(x=>ids.indexOf(x.s)<0&&ids.indexOf(x.t)<0);
       state.msel.clear(); state.sel=null;
-      save(); rebuild(); layout(); rebuildUI(); render(); renderList(); showDetail(); return;
+      save(); rebuild(); rebuildUI(); render(); renderList(); showDetail(); return;
     }
     if(state.arrowSel){
       const ar=(doc.arrows||[]).filter(x=>x.id===state.arrowSel)[0];
