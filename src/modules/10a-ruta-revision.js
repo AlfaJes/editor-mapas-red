@@ -1,5 +1,12 @@
+import { S } from './00-store.js';
+import { state } from './01-base.js';
+import { netColOf, netsList } from './02-modelo.js';
+import { netName } from './04a-geometria.js';
+import { render, renderList, select } from './04b-render-mapa.js';
+import { escAttr } from './04c-ficha-formularios.js';
+import { t } from './dom.js';
 // ---------- ruta, revisión, export ----------
-function inPath(s,t){
+export function inPath(s,t){
   if(!state.path)return false;
   for(var i=0;i<state.path.length-1;i++){
     var a=state.path[i],b=state.path[i+1];
@@ -7,16 +14,16 @@ function inPath(s,t){
   }
   return false;
 }
-function reviewIssues(){
+export function reviewIssues(){
   var out=[],ipM={},macM={};
-  nodes.forEach(function(n){
+  S.nodes.forEach(function(n){
     (n.ip||[]).forEach(function(ip){(ipM[ip]=ipM[ip]||[]).push(n);});
     var m=(n.mac||'').trim().toUpperCase();
     if(m&&m!=='—'&&m!=='?'){(macM[m]=macM[m]||[]).push(n);}
   });
   Object.keys(ipM).forEach(function(ip){ if(ipM[ip].length>1)out.push({ic:'\u29c9',t:'IP duplicada \u00b7 '+ip+(netName(ip)?' \u00b7 '+netName(ip):''),who:ipM[ip],n:ipM[ip][0]}); });
   Object.keys(macM).forEach(function(m){ if(macM[m].length>1)out.push({ic:'\u29c9',t:'MAC duplicada \u00b7 '+m,who:macM[m],n:macM[m][0]}); });
-  nodes.forEach(function(n){
+  S.nodes.forEach(function(n){
     if(!(n.ip||[]).length)out.push({ic:'\u00b7',t:'Sin IP',who:[n],n:n});
     (n.ip||[]).forEach(function(ip){
       if(!/^(192\.168\.|10\.|172\.(1[6-9]|2\d|3[01])\.)/.test(ip))
@@ -30,7 +37,7 @@ function reviewIssues(){
   });
   return out;
 }
-function renderCmodal(){
+export function renderCmodal(){
   var box=document.getElementById('clist'); if(!box)return;
   var iss=reviewIssues();
   if(!iss.length){box.innerHTML='<div class="empty" style="padding:14px">Sin incidencias: el inventario est\u00e1 completo.</div>';return;}
@@ -46,9 +53,9 @@ function renderCmodal(){
     };
   });
 }
-var NETS=['Oficinas','Producci\u00f3n','Servidores','sin'];
-function netsChips(){ var l=netsList(); if(l.indexOf('sin')<0)l=l.concat(['sin']); return l; }
-function renderNets(){
+export var NETS=['Oficinas','Producci\u00f3n','Servidores','sin'];
+export function netsChips(){ var l=netsList(); if(l.indexOf('sin')<0)l=l.concat(['sin']); return l; }
+export function renderNets(){
   var box=document.getElementById('fNets'); if(!box)return;
   box.innerHTML=netsChips().map(function(k){
     return '<button type="button" class="nc'+(state.nets.has(k)?' on':'')+'" data-k="'+k+'">'+

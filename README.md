@@ -44,7 +44,8 @@ El editor se construye desde `src/` y el resultado es **un único HTML** autosuf
 ```
 src/template.html   estructura (head, cuerpo, diálogos)
 src/styles.css      estilos
-src/parts/*.js      código, por áreas (base, modelo, layout, render, interacción, UI, rack, zonas, ruta/export, init)
+src/modules/*.js    código en módulos ES (base, modelo, layout, geometría, render, formularios,
+                    interacciones, UI, rack, armarios, conexiones, zonas, proyectos, init)
 src/data.json       mapa real (NO se publica; está en .gitignore)
 build.mjs           empaqueta y minifica en un solo archivo
 ```

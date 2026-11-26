@@ -1,9 +1,17 @@
-function buildStaticSVG(light){
+import { S } from './00-store.js';
+import { state } from './01-base.js';
+import { ZBOX, allZonas } from './03-layout.js';
+import { C } from './04a-geometria.js';
+import { assignPort, pathHint, render } from './04b-render-mapa.js';
+import { showDetail } from './04c-ficha-formularios.js';
+import { setBtn } from './07-ui.js';
+import { svg, t, world } from './dom.js';
+export function buildStaticSVG(light){
   var svgEl=document.getElementById('map');
   var clone=svgEl.cloneNode(true);
   Array.prototype.forEach.call(clone.querySelectorAll('.edge-hit,.zh,.ahit,.ah'),function(e){ if(e.parentNode)e.parentNode.removeChild(e); });
   var xs=[],ys=[];
-  nodes.forEach(function(n){xs.push(n.x);ys.push(n.y);});
+  S.nodes.forEach(function(n){xs.push(n.x);ys.push(n.y);});
   ZBOX.forEach(function(b){xs.push(b.x,b.x+(b.w||340));ys.push(b.y,b.y+(b.h||150));});
   var x0=Math.min.apply(null,xs)-40,x1=Math.max.apply(null,xs)+40;
   var y0=Math.min.apply(null,ys)-40,y1=Math.max.apply(null,ys)+40;
@@ -48,7 +56,7 @@ function buildStaticSVG(light){
   var data=new XMLSerializer().serializeToString(clone);
   return {data:data,W:W,H:H,url:'data:image/svg+xml;charset=utf-8,'+encodeURIComponent(data)};
 }
-function exportPNG(){
+export function exportPNG(){
   var s=buildStaticSVG(false),W=s.W,H=s.H;
   if(W>4200){ H=Math.round(H*4200/W); W=4200; }
   var img=new Image();
@@ -64,10 +72,10 @@ function exportPNG(){
   };
   img.src=s.url;
 }
-function exportPDF(){
+export function exportPDF(){
   var s=buildStaticSVG(true);
-  var tit=(doc.title||'Mapa de red');
-  var sub=(doc.subtitle||'');
+  var tit=(S.doc.title||'Mapa de red');
+  var sub=(S.doc.subtitle||'');
   var hoy=new Date().toLocaleDateString('es-ES');
   var win=window.open('','_blank');
   if(!win){ alert('Permite las ventanas emergentes para exportar a PDF.'); return; }
@@ -82,7 +90,7 @@ function exportPDF(){
     '<title>'+tit+'</title><style>'+css+'</style></head><body>'+
     '<h1>'+tit+'</h1><div class="sub">'+sub+'</div>'+
     '<div class="sheet"><img src="'+s.url+'"></div>'+
-    '<div class="ft">'+nodes.length+' equipos \u00b7 '+edges.length+' enlaces \u00b7 '+allZonas().length+' secciones \u00b7 '+hoy+'</div>'+
+    '<div class="ft">'+S.nodes.length+' equipos \u00b7 '+S.edges.length+' enlaces \u00b7 '+allZonas().length+' secciones \u00b7 '+hoy+'</div>'+
     '</body></html>';
   win.document.open(); win.document.write(html); win.document.close();
   win.focus();
@@ -93,7 +101,7 @@ document.addEventListener('change',function(ev){
   var s=ev.target;
   if(!s||!s.classList||!s.classList.contains('psel'))return;
   var ei=parseInt(s.dataset.ei,10), side=s.dataset.side, np=parseInt(s.value,10);
-  var e=doc.edges[ei];
+  var e=S.doc.edges[ei];
   if(!e||!assignPort(e,side,np)){ showDetail(); }
 });
 document.getElementById('bPath').onclick=function(){

@@ -39,15 +39,12 @@ if (!/MAPA DE RED/.test(dom)) { console.log('FALLO titulo'); bad++; }
 
 // La version publica no debe llevar datos del mapa dentro
 const html = readFileSync(abs, 'utf8');
-const iData = html.indexOf('const DATA=');
-const tail = iData >= 0 ? html.slice(iData + 11, iData + 60).trimStart() : '';
-const dataM = iData >= 0 ? [null, tail] : null;
+// el seed puede aparecer como `const DATA=` o minificado `var DATA=` / `DATA=`
+const conDatos = /"nodes"\s*:\s*\[\s*\{/.test(html);
 if (!full) {
-  const vacio = !!dataM && dataM[1].startsWith('{}');
-  console.log((vacio ? 'OK   ' : 'FALLO') + ' version publica sin datos: ' + (vacio ? 'si' : 'NO'));
-  if (!vacio) bad++;
+  console.log((conDatos ? 'FALLO' : 'OK   ') + ' version publica sin datos: ' + (conDatos ? 'NO' : 'si'));
+  if (conDatos) bad++;
 } else {
-  const conDatos = /"nodes"\s*:\s*\[\s*\{/.test(html);
   console.log((conDatos ? 'OK   ' : 'FALLO') + ' version privada con datos: ' + (conDatos ? 'si' : 'NO'));
   if (!conDatos) bad++;
 }

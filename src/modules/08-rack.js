@@ -1,15 +1,25 @@
+import { S } from './00-store.js';
+import { DATA, TYPE, state } from './01-base.js';
+import { rebuild, save, snap } from './02-modelo.js';
+import { applyTitle, renderZmodal } from './03-layout.js';
+import { col, sn } from './04a-geometria.js';
+import { render, renderList, select, v } from './04b-render-mapa.js';
+import { escAttr } from './04c-ficha-formularios.js';
+import { delLink } from './05-mutaciones.js';
+import { renderArmarios } from './08b-armarios.js';
+import { RACK, svg, t } from './dom.js';
 // ---------- vista rack ----------
-const RACK=document.getElementById('rack');
-const ORDT=['router','firewall','switch','server','nas','nvr','wifi','pc','otro'];
+
+export const ORDT=['router','firewall','switch','server','nas','nvr','wifi','pc','otro'];
 
 /* ---------- armario gráfico ---------- */
-function rackZonas(){
+export function rackZonas(){
   var zs={};
-  nodes.forEach(function(n){ if(n.zona){ zs[n.zona]=(zs[n.zona]||0)+1; } });
+  S.nodes.forEach(function(n){ if(n.zona){ zs[n.zona]=(zs[n.zona]||0)+1; } });
   return Object.keys(zs).sort(function(a,b){return a.localeCompare(b,'es');});
 }
 
-function rackU(n){
+export function rackU(n){
   var fijo=parseInt(n.u);
   if(fijo>0)return Math.max(1,Math.min(8,fijo));
   var t=n.tipo;
@@ -17,32 +27,32 @@ function rackU(n){
   if(t==='ups')return 3;
   return 1;
 }
-function gotoMapa(id){
+export function gotoMapa(id){
   state.view='mapa'; document.body.classList.remove('viewrack');
   var b=document.getElementById('bRack'); if(b){ b.classList.remove('on'); b.textContent='\ud83d\uddc4 Rack'; }
   render(); select(id,true);
 }
-function rackIdsDom(z){
+export function rackIdsDom(z){
   var out=[];
   RACK.querySelectorAll('.cabrow').forEach(function(g){
     if(g.getAttribute('data-zone')===z) out.push(g.getAttribute('data-id'));
   });
   return out;
 }
-function rackMove(dir){
+export function rackMove(dir){
   var id=state.rackSel; if(!id)return;
-  var n=byId[id]; if(!n)return;
+  var n=S.byId[id]; if(!n)return;
   var z=n.zona||'';
   var ids=rackIdsDom(z);
   var i=ids.indexOf(id); if(i<0)return;
   var j=i+dir; if(j<0||j>=ids.length)return;
   ids.splice(i,1); ids.splice(j,0,id);
-  doc.rackOrder=doc.rackOrder||{}; doc.rackOrder[z]=ids;
+  S.doc.rackOrder=S.doc.rackOrder||{}; S.doc.rackOrder[z]=ids;
   save(); renderRack();
 }
 
 
-function renderRack(){
+export function renderRack(){
   if(!RACK)return;
   var mode=state.rackMode||'lista';
   if(mode==='armario'){ renderArmarios(); return; }
@@ -61,7 +71,7 @@ function renderRack(){
       '<button class="btn sm" id="rkpatch" title="Añadir un patch panel a este armario">\uFF0B Patch</button>'+
       '<button class="btn sm tog'+(state.rackOnly?' on':'')+'" id="rkonly" title="Mostrar solo equipos de armario (switch, router, servidor…)">Solo armario</button>'+
       '<span class="rkleg"><i style="background:#4f8cff"></i>ocupado <i style="background:#22344f"></i>libre</span>'+
-      ((doc.rackHidden&&doc.rackHidden.length)?'<button class="btn sm" id="rkrest">Restaurar '+doc.rackHidden.length+'</button>':'')+
+      ((S.doc.rackHidden&&S.doc.rackHidden.length)?'<button class="btn sm" id="rkrest">Restaurar '+S.doc.rackHidden.length+'</button>':'')+
       (state.rackSel?'<span class="rkord"><button class="btn sm" id="rkup" title="Subir un puesto">\u25b2 Subir</button><button class="btn sm" id="rkdn" title="Bajar un puesto">\u25bc Bajar</button><button class="btn sm" id="rkgoto">Ver en el mapa</button></span>':'')):'' )+
     '</div>';
   RACK.innerHTML=head+rackLista();
@@ -79,27 +89,27 @@ function renderRack(){
   var rp=document.getElementById('rkpatch'); if(rp)rp.onclick=function(){
     var z=state.rackZone&&state.rackZone!=='*'?state.rackZone:(rackZonas()[0]||'');
     if(!z)return;
-    doc.patches=doc.patches||{}; doc.patches[z]=doc.patches[z]||[];
-    doc.patches[z].push({n:'Patch '+(doc.patches[z].length+1)+' (24)',ports:24});
+    S.doc.patches=S.doc.patches||{}; S.doc.patches[z]=S.doc.patches[z]||[];
+    S.doc.patches[z].push({n:'Patch '+(S.doc.patches[z].length+1)+' (24)',ports:24});
     save(); renderRack();
   };
   RACK.querySelectorAll('[data-pdel]').forEach(function(x){
     x.onclick=function(ev){ ev.stopPropagation();
       var z=x.closest('[data-zone]')?x.closest('[data-zone]').getAttribute('data-zone'):state.rackZone;
       var i=parseInt(x.getAttribute('data-pdel'),10);
-      if(doc.patches&&doc.patches[z]){ doc.patches[z].splice(i,1); save(); renderRack(); }
+      if(S.doc.patches&&S.doc.patches[z]){ S.doc.patches[z].splice(i,1); save(); renderRack(); }
     };
   });
   var ro=document.getElementById('rkonly'); if(ro)ro.onclick=function(){ state.rackOnly=!state.rackOnly; try{localStorage.setItem('nm_rackonly',state.rackOnly?'1':'0');}catch(e){} renderRack(); };
-  var rr=document.getElementById('rkrest'); if(rr)rr.onclick=function(){ doc.rackHidden=[]; save(); renderRack(); };
+  var rr=document.getElementById('rkrest'); if(rr)rr.onclick=function(){ S.doc.rackHidden=[]; save(); renderRack(); };
   RACK.querySelectorAll('.cabxx[data-hide]').forEach(function(x){
     x.onclick=function(ev){ ev.stopPropagation(); var id=x.getAttribute('data-hide');
-      doc.rackHidden=(doc.rackHidden||[]); if(doc.rackHidden.indexOf(id)<0)doc.rackHidden.push(id);
+      S.doc.rackHidden=(S.doc.rackHidden||[]); if(S.doc.rackHidden.indexOf(id)<0)S.doc.rackHidden.push(id);
       save(); renderRack(); };
   });
   RACK.querySelectorAll('.cabx[data-zoff]').forEach(function(x){
     x.onclick=function(ev){ ev.stopPropagation(); var z=x.getAttribute('data-zoff');
-      doc.rackZonesOff=(doc.rackZonesOff||[]); if(doc.rackZonesOff.indexOf(z)<0)doc.rackZonesOff.push(z);
+      S.doc.rackZonesOff=(S.doc.rackZonesOff||[]); if(S.doc.rackZonesOff.indexOf(z)<0)S.doc.rackZonesOff.push(z);
       save(); renderRack(); };
   });
   var bu=document.getElementById('rkup'); if(bu)bu.onclick=function(){ rackMove(-1); };
@@ -108,14 +118,14 @@ function renderRack(){
   try{bindRackDrag();}catch(e){}
 }
 
-function rackLista(){
+export function rackLista(){
   if(!RACK)return;
-  const rz=[...new Set(nodes.filter(n=>/rack|armario/i.test(n.zona)).map(n=>n.zona))].sort();
-  const sws=nodes.filter(n=>n.tipo==='switch'||n.tipo==='router')
+  const rz=[...new Set(S.nodes.filter(n=>/rack|armario/i.test(n.zona)).map(n=>n.zona))].sort();
+  const sws=S.nodes.filter(n=>n.tipo==='switch'||n.tipo==='router')
     .sort((a,b)=>a.zona.localeCompare(b.zona,'es')||a.nombre.localeCompare(b.nombre,'es'));
   let out='<div class="racks">';
   rz.forEach(z=>{
-    const m=nodes.filter(n=>n.zona===z).sort((a,b)=>
+    const m=S.nodes.filter(n=>n.zona===z).sort((a,b)=>
       ((ORDT.indexOf(a.tipo)+1||9)-(ORDT.indexOf(b.tipo)+1||9))||a.nombre.localeCompare(b.nombre,'es'));
     out+=`<div class="rcard"><div class="rhead"><div><div class="rname">${z}</div>
       <div class="rmeta">${m.length} equipos en el armario</div></div></div><div class="rslots">`+
@@ -125,19 +135,19 @@ function rackLista(){
   });
   sws.forEach(sw=>{
     const cap=parseInt(sw.puertos)||0;
-    const mine=doc.edges.filter(e=>e.h===sw.id);
+    const mine=S.doc.edges.filter(e=>e.h===sw.id);
     const N=cap>0?Math.max(cap,...mine.map(e=>e.port)):Math.max(8,...mine.map(e=>e.port));
     const linked=new Set(mine.map(e=>e.s===sw.id?e.t:e.s));
     let rows='';
     for(let p=1;p<=N;p++){
       const e=mine.find(x=>x.port===p);
-      if(e){const dev=byId[e.s===sw.id?e.t:e.s];
+      if(e){const dev=S.byId[e.s===sw.id?e.t:e.s];
         rows+=`<div class="slot used" data-id="${dev.id}"><span class="pnum">${p}</span>
           <span class="dot" style="background:${col(dev)}"></span><span class="sn">${dev.nombre}</span>
           <span class="st">${(TYPE[dev.tipo]||['',''])[1]}</span>
           <button class="x" data-h="${sw.id}" data-d="${dev.id}">✕</button></div>`;
       } else {
-        const opts=nodes.filter(x=>x.id!==sw.id&&!linked.has(x.id))
+        const opts=S.nodes.filter(x=>x.id!==sw.id&&!linked.has(x.id))
           .sort((a,b)=>a.nombre.localeCompare(b.nombre,'es'))
           .map(x=>`<option value="${x.id}">${x.nombre}</option>`).join('');
         rows+=`<div class="slot free"><span class="pnum">${p}</span>
@@ -150,13 +160,13 @@ function rackLista(){
   });
   return out+'</div>';
 }
-function rackBind(){
+export function rackBind(){
   RACK.querySelectorAll('.slot.used').forEach(el=>el.onclick=ev=>{
     if(ev.target.tagName==='BUTTON'||ev.target.tagName==='SELECT')return; gotoMapa(el.dataset.id);});
   RACK.querySelectorAll('.x').forEach(b=>b.onclick=ev=>{ev.stopPropagation();delLink(b.dataset.h,b.dataset.d);});
   RACK.querySelectorAll('.psel').forEach(s=>s.onchange=ev=>{
     const d=ev.target.value; if(!d)return;
-    snap(); doc.edges.push({s:s.dataset.h,t:d,h:s.dataset.h,port:+s.dataset.p});
+    snap(); S.doc.edges.push({s:s.dataset.h,t:d,h:s.dataset.h,port:+s.dataset.p});
     save(); rebuild(); render(); renderList();});
 }
 document.getElementById('bRack').onclick=()=>{
@@ -167,13 +177,13 @@ document.getElementById('bRack').onclick=()=>{
   document.getElementById('bRack').textContent=on?'🗺 Mapa':'🗄 Rack';
   if(on)renderRack(); else render();
 };
-function bindTitle(){
+export function bindTitle(){
   [['ttl','title'],['sub','sub']].forEach(function(pair){
     var id=pair[0], key=pair[1];
     var el=document.getElementById(id); if(!el)return;
     el.addEventListener('blur',function(){
       var v=el.textContent.replace(/\s+/g,' ').trim();
-      doc[key]=v||(key==='title'?DATA.titulo:DATA.sub);
+      S.doc[key]=v||(key==='title'?DATA.titulo:DATA.sub);
       save(); applyTitle();
     });
     el.addEventListener('keydown',function(ev){ if(ev.key==='Enter'){ev.preventDefault();el.blur();} });
@@ -185,7 +195,7 @@ document.getElementById('bZonas').onclick=function(){
 document.getElementById('z_close').onclick=function(){document.getElementById('zmodal').classList.remove('on');};
 
 // ---------- exportar el armario a PNG ----------
-function exportRackPNG(){
+export function exportRackPNG(){
   var svgEl=document.querySelector('.cabsvg');
   if(!svgEl){ alert('Abre un armario para poder exportarlo.'); return; }
   var clone=svgEl.cloneNode(true);

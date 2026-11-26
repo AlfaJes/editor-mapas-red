@@ -1,11 +1,21 @@
-function readHTML(n){
-  const nb=[...adj[n.id]].map(x=>byId[x]).sort((a,b)=>a.nombre.localeCompare(b.nombre,'es'));
-  return `<div class="dtitle">${n.nombre}${DUPS.has(n.id)?'<span class="badge">IP duplicada</span>':''}</div>
+import { S } from './00-store.js';
+import { TYPE, state } from './01-base.js';
+import { netColOf, portSel, rebuild, save, snap, syncRackPort } from './02-modelo.js';
+import { allZonas } from './03-layout.js';
+import { C, ICONS, cabCats, col, netName, pruneEdgePoints } from './04a-geometria.js';
+import { mineOn, pathHint, portGrid, render, renderList, select, v } from './04b-render-mapa.js';
+import { addLink, delLink, delNode, saveEdit } from './05-mutaciones.js';
+import { setBtn } from './07-ui.js';
+import { openEdgeNote } from './10d-guardado-notas.js';
+import { t } from './dom.js';
+export function readHTML(n){
+  const nb=[...S.adj[n.id]].map(x=>S.byId[x]).sort((a,b)=>a.nombre.localeCompare(b.nombre,'es'));
+  return `<div class="dtitle">${n.nombre}${S.DUPS.has(n.id)?'<span class="badge">IP duplicada</span>':''}</div>
    <div class="dtype" style="color:${col(n)}">${(TYPE[n.tipo]||['','Equipo'])[1]} · ${n.zona}</div>
    <dl class="kv">
      <dt>IP</dt><dd class="mono">${n.ip.length?n.ip.map(ip=>{
        const nn=netName(ip);
-       const cc=(DUPI[n.id]||[]).filter(x=>x.ip===ip).map(x=>x.other);
+       const cc=(S.DUPI[n.id]||[]).filter(x=>x.ip===ip).map(x=>x.other);
        return `<span class="${cc.length?'ipbad':''}">${escAttr(ip)}</span>`+
          (nn?` <span class="netp" style="color:${netColOf(nn)}">${nn}</span>`:'')+
          (cc.length?` <span class="dupw">⚠ ya en ${escAttr(cc.join(', '))}</span>`:'');
@@ -34,9 +44,9 @@ function readHTML(n){
    <button class="btn" id="e_start" style="margin-top:10px;width:100%">✎ Editar este equipo</button>`;
 }
 
-const PERIFS=['Monitor','2º monitor','Teclado','Ratón','Impresora','Escáner','Lector de códigos',
+export const PERIFS=['Monitor','2º monitor','Teclado','Ratón','Impresora','Escáner','Lector de códigos',
   'Etiquetadora','Webcam','Auriculares','Altavoces','SAI','Plotter'];
-const TYPEF={
+export const TYPEF={
  pc:[
   {k:'so',l:'Sistema operativo',ph:'Windows 11 Pro'},
   {k:'sover',l:'Versión',ph:'23H2'},
@@ -107,12 +117,12 @@ const TYPEF={
   {k:'hdd',l:'Almacenamiento',ph:''}
  ]
 };
-function escAttr(v){return String(v==null?'':v).replace(/"/g,'&quot;');}
-function perfList(v){
+export function escAttr(v){return String(v==null?'':v).replace(/"/g,'&quot;');}
+export function perfList(v){
   const arr=Array.isArray(v)?v:(v?String(v).split(',').map(s=>s.trim()).filter(Boolean):[]);
   return arr.map(x=>typeof x==='string'?{t:x,marca:'',modelo:'',serie:''}:x);
 }
-function perifRowHTML(p,opts){
+export function perifRowHTML(p,opts){
   const t=(p&&p.t)||opts[0];
   return `<div class="pdet"><select data-f="t">${opts.map(o=>`<option${o===t?' selected':''}>${o}</option>`).join('')}</select>
     <input data-f="marca" placeholder="Marca" value="${escAttr(p&&p.marca)}">
@@ -120,7 +130,7 @@ function perifRowHTML(p,opts){
     <input data-f="serie" placeholder="Nº serie" value="${escAttr(p&&p.serie)}">
     <button type="button" class="x" data-pdel="1">✕</button></div>`;
 }
-function bindLists(pre,tipo){
+export function bindLists(pre,tipo){
   (TYPEF[tipo]||[]).forEach(f=>{
     if(f.type!=='list')return;
     const box=document.getElementById('plist_'+pre+'_'+f.k);
@@ -135,14 +145,14 @@ function bindLists(pre,tipo){
     };
   });
 }
-function prowHTML(p){
+export function prowHTML(p){
   return `<div class="prow" data-p="${escAttr(p.t)}"><span class="pnom">${escAttr(p.t)}</span>
     <input data-f="marca" placeholder="Marca" value="${escAttr(p.marca)}">
     <input data-f="modelo" placeholder="Modelo" value="${escAttr(p.modelo)}">
     <input data-f="serie" placeholder="Nº serie" value="${escAttr(p.serie)}"></div>`;
 }
-function fldVal(v){ if(Array.isArray(v))return v; return v==null?'':String(v); }
-function fieldsHTML(pre,tipo,n){
+export function fldVal(v){ if(Array.isArray(v))return v; return v==null?'':String(v); }
+export function fieldsHTML(pre,tipo,n){
   const list=TYPEF[tipo]||[];
   if(!list.length)return '';
   const head=`<div class="fsep">Datos de ${(TYPE[tipo]||['','equipo'])[1].toLowerCase()}</div>`;
@@ -169,11 +179,11 @@ function fieldsHTML(pre,tipo,n){
     }
     return `<div class="fld"><label>${f.l}</label><input id="${id}" value="${String(v==null?'':v).replace(/"/g,'&quot;')}" placeholder="${f.ph||''}"></div>`;
   }).join('');
-  const portsv=(n&&n.id&&doc.edges.some(function(e){return e.s===n.id||e.t===n.id;}))?portGrid(n):'';
+  const portsv=(n&&n.id&&S.doc.edges.some(function(e){return e.s===n.id||e.t===n.id;}))?portGrid(n):'';
   const ports=portsHTML(pre,n);
   return head+body+portsv+ports;
 }
-function bindChips(root){
+export function bindChips(root){
   if(!root||!root.querySelectorAll)return;
   root.querySelectorAll('.chips').forEach(c=>{
     const id=c.id||'', pre=id.indexOf('_')>0?id.slice(0,id.indexOf('_')):'e';
@@ -198,7 +208,7 @@ function bindChips(root){
     c.querySelectorAll('.chip').forEach(b=>b.onclick=()=>{b.classList.toggle('on');rebuild();});
   });
 }
-function readFields(pre,tipo){
+export function readFields(pre,tipo){
   const out={};
   (TYPEF[tipo]||[]).forEach(f=>{
     const el=document.getElementById(pre+'_'+f.k);
@@ -226,18 +236,18 @@ function readFields(pre,tipo){
   return out;
 }
 
-const PTIPOS=['Cobre RJ45','Cobre RJ45 PoE','Fibra SFP','Fibra SFP+','Fibra SFP28','Fibra QSFP+','Fibra QSFP28','Consola'];
-const PVELS=['10 Mbps','100 Mbps','1 Gbps','2,5 Gbps','5 Gbps','10 Gbps','25 Gbps','40 Gbps','100 Gbps'];
-let PHOST='';
-function portConn(hostId,num){
+export const PTIPOS=['Cobre RJ45','Cobre RJ45 PoE','Fibra SFP','Fibra SFP+','Fibra SFP28','Fibra QSFP+','Fibra QSFP28','Consola'];
+export const PVELS=['10 Mbps','100 Mbps','1 Gbps','2,5 Gbps','5 Gbps','10 Gbps','25 Gbps','40 Gbps','100 Gbps'];
+S.PHOST='';
+export function portConn(hostId,num){
   const it=mineOn(hostId).filter(function(x){return x.port===num;})[0];
   if(!it)return null;
-  const o=byId[it.other];
+  const o=S.byId[it.other];
   return o?{id:o.id,nombre:o.nombre}:null;
 }
-function portRowHTML(p){
+export function portRowHTML(p){
   const tp=PTIPOS.indexOf(p.tipo)>=0?p.tipo:PTIPOS[0], vl=PVELS.indexOf(p.vel)>=0?p.vel:'1 Gbps';
-  const c=PHOST?portConn(PHOST,p.n):null;
+  const c=S.PHOST?portConn(S.PHOST,p.n):null;
   return `<div class="pyrow"><span class="pn">${p.n}</span>
     <span class="pconn${c?' on':''}" title="${c?escAttr(c.nombre):'sin conexión'}">${c?escAttr(c.nombre):'\u2014'}</span>
     <select data-f="tipo">${PTIPOS.map(t=>`<option${tp===t?' selected':''}>${t}</option>`).join('')}</select>
@@ -245,8 +255,8 @@ function portRowHTML(p){
     <input data-f="nota" placeholder="nota / transceptor" value="${escAttr(p.nota)}">
     <button type="button" class="pnx" data-del="${p.n}" title="Quitar este puerto">\u2715</button></div>`;
 }
-function portsHTML(pre,n){
-  PHOST=(n&&n.id)||'';
+export function portsHTML(pre,n){
+  S.PHOST=(n&&n.id)||'';
   const arr=n&&Array.isArray(n.ports)?n.ports:[];
   const cnt=arr.length||(parseInt(n&&n.puertos)||0);
   return `<div class="fsep">Inventario de puertos</div>
@@ -259,7 +269,7 @@ function portsHTML(pre,n){
    </div>
    <div class="ptable" id="${pre}_ports">${arr.map(portRowHTML).join('')}</div>`;
 }
-function bindPorts(pre){
+export function bindPorts(pre){
   const box=document.getElementById(pre+'_ports');
   if(!box)return;
   box.addEventListener('click',function(ev){
@@ -267,12 +277,12 @@ function bindPorts(pre){
     if(!b)return;
     ev.preventDefault(); ev.stopPropagation();
     var pn=parseInt(b.dataset.del)||0;
-    if(typeof PHOST==='string'&&PHOST){
-      var ed=doc.edges.filter(function(x){return x.h===PHOST&&x.port===pn;})[0];
+    if(typeof S.PHOST==='string'&&S.PHOST){
+      var ed=S.doc.edges.filter(function(x){return x.h===S.PHOST&&x.port===pn;})[0];
       if(ed){
-        var oo=byId[ed.s===PHOST?ed.t:ed.s];
+        var oo=S.byId[ed.s===S.PHOST?ed.t:ed.s];
         if(!confirm('El puerto '+pn+' tiene conectado '+(oo?oo.nombre:'un equipo')+'. \u00bfQuitar tambi\u00e9n ese enlace?'))return;
-        doc.edges=doc.edges.filter(function(x){return !(x.h===PHOST&&x.port===pn);});
+        S.doc.edges=S.doc.edges.filter(function(x){return !(x.h===S.PHOST&&x.port===pn);});
         save();
       }
     }
@@ -305,7 +315,7 @@ function bindPorts(pre){
     });
   };
 }
-function readPorts(pre){
+export function readPorts(pre){
   const box=document.getElementById(pre+'_ports');
   if(!box)return null;
   const arr=[].slice.call(box.querySelectorAll('.pyrow')).map(r=>{
@@ -314,14 +324,14 @@ function readPorts(pre){
   });
   return arr.length?arr:null;
 }
-function portsSummary(n){
+export function portsSummary(n){
   const a=n&&n.ports;
   if(!Array.isArray(a)||!a.length)return '';
   const m={};
   a.forEach(p=>{const k=(p.tipo||'?')+(p.vel?' · '+p.vel:'')+(p.nota?' ('+p.nota+')':'');m[k]=(m[k]||0)+1;});
   return `<dt>Puertos</dt><dd>${a.length} — ${Object.keys(m).map(k=>m[k]+'× '+k).join(', ')}</dd>`;
 }
-function extraHTML(n){
+export function extraHTML(n){
   const list=TYPEF[n.tipo]||[];
   const rows=list.map(f=>{
     let v=n[f.k];
@@ -338,7 +348,7 @@ function extraHTML(n){
   }).join('');
   return (rows||portsSummary(n))?`<dl class="kv">${rows}${portsSummary(n)}</dl>`:'';
 }
-function renderMExtra(){
+export function renderMExtra(){
   const t=document.getElementById('m_tipo').value||'pc';
   const w=document.getElementById('m_extra');
   if(!w)return;
@@ -348,7 +358,7 @@ function renderMExtra(){
   bindPorts('m');
 }
 
-function nicsHTML(list){
+export function nicsHTML(list){
   list=list||[];
   if(!list.length)list=[{k:'virtual',m:'bridge'}];
   return list.map(function(v){
@@ -367,7 +377,7 @@ function nicsHTML(list){
     '</div>';
   }).join('');
 }
-function nicsRead(boxId){
+export function nicsRead(boxId){
   var box=document.getElementById(boxId); if(!box)return [];
   return [].map.call(box.querySelectorAll('.nicrow'),function(r){
     function v(c){var e=r.querySelector(c);return e?String(e.value||'').trim():'';}
@@ -375,16 +385,16 @@ function nicsRead(boxId){
     return (o.n||o.ip||o.mac||o.host)?o:null;
   }).filter(Boolean);
 }
-function nicsFill(boxId,list){
+export function nicsFill(boxId,list){
   var box=document.getElementById(boxId); if(!box)return;
   box.innerHTML=nicsHTML(list&&list.length?list:[{k:'virtual',m:'bridge'}]);
 }
-function formHTML(n){
-  const links=edges.filter(e=>e.s===n.id||e.t===n.id).map(e=>{
-    const o=byId[e.s===n.id?e.t:e.s]; return {o,s:e.s,t:e.t};});
+export function formHTML(n){
+  const links=S.edges.filter(e=>e.s===n.id||e.t===n.id).map(e=>{
+    const o=S.byId[e.s===n.id?e.t:e.s]; return {o,s:e.s,t:e.t};});
   const opts=Object.entries(TYPE).map(([k,[c,l]])=>`<option value="${k}"${n.tipo===k?' selected':''}>${l}</option>`).join('');
   return `<div class="dtitle">Editar equipo</div>
-  <div class="dtype" style="color:${col(n)}">${DUPS.has(n.id)?'<span class="badge">IP duplicada</span>':''}</div>
+  <div class="dtype" style="color:${col(n)}">${S.DUPS.has(n.id)?'<span class="badge">IP duplicada</span>':''}</div>
   <div class="form">
     <div class="fld"><label>Nombre</label><input id="e_nombre" value="${(n.nombre||'').replace(/"/g,'&quot;')}"></div>
     <div class="row2">
@@ -393,7 +403,7 @@ function formHTML(n){
       <div class="fld"><label>Zona</label><select id="e_zona">${allZonas().slice().sort((a,b)=>a.localeCompare(b,'es')).map(z=>`<option value="${z.replace(/"/g,'&quot;')}"${z===n.zona?' selected':''}>${z}</option>`).join('')}<option value="__nueva__">\u002b Crear zona nueva\u2026</option></select>
       <input id="e_zona_new" placeholder="Nombre de la zona nueva" style="display:none;margin-top:5px"></div>
     </div>
-    <datalist id="zl">${zonas.map(z=>`<option value="${z}">`).join('')}</datalist>
+    <datalist id="zl">${S.zonas.map(z=>`<option value="${z}">`).join('')}</datalist>
     <div class="fld"><label>Direcciones IP (una por línea)</label><textarea id="e_ip" placeholder="192.168.4.20">${n.ip.join('\n')}</textarea>
       <div class="iphelp">Una por línea. Si el equipo está en varias redes, ponlas todas: <b>192.168.41.25</b> y <b>192.168.1.25</b> no son duplicado.</div>
       <button type="button" class="btn mini" id="e_ipadd">＋ Añadir otra IP</button></div>
@@ -418,16 +428,16 @@ function formHTML(n){
       <b>${l.o?(TYPE[l.o.tipo]||['',''])[1]:''}</b>
       <button class="x" data-s="${l.s}" data-t="${l.t}">✕</button></div>`).join('')||'<div class="empty" style="padding:6px 0">Sin enlaces</div>'}
     <div class="ladd"><select id="e_lsel"><option value="">— conectar con —</option>
-      ${nodes.filter(x=>x.id!==n.id).sort((a,b)=>a.nombre.localeCompare(b.nombre,'es'))
+      ${S.nodes.filter(x=>x.id!==n.id).sort((a,b)=>a.nombre.localeCompare(b.nombre,'es'))
         .map(x=>`<option value="${x.id}">${x.nombre}</option>`).join('')}</select>
       <button class="btn" id="e_ladd">＋</button></div>
   </div>`;
 }
-function showDetail(){
+export function showDetail(){
   const d=document.getElementById('detail'),app=document.querySelector('.app');
   if(state.pathMode){
     app.classList.add('sel');
-    var org=state.pathA?byId[state.pathA]:null;
+    var org=state.pathA?S.byId[state.pathA]:null;
     d.innerHTML='<div class="dtitle">\ud83e\udded Ruta</div>'+
       '<div class="dtype">'+(org?('Origen: <b>'+escAttr(org.nombre)+'</b><br>Ahora pulsa el equipo de destino.'):'Pulsa el equipo de <b>origen</b> en el mapa y despu\u00e9s el de destino.')+'</div>'+
       '<div class="frow" style="margin-top:8px"><button class="btn" id="rt_cancel">Cancelar ruta</button></div>';
@@ -436,10 +446,10 @@ function showDetail(){
     return;
   }
   if(state.esel){
-    const ed0=doc.edges.find(x=>(x.s===state.esel.s&&x.t===state.esel.t)||(x.s===state.esel.t&&x.t===state.esel.s));
+    const ed0=S.doc.edges.find(x=>(x.s===state.esel.s&&x.t===state.esel.t)||(x.s===state.esel.t&&x.t===state.esel.s));
     if(!ed0){state.esel=null;}
     else{
-      const A=byId[ed0.s],B=byId[ed0.t];
+      const A=S.byId[ed0.s],B=S.byId[ed0.t];
       app.classList.add('sel');
       d.innerHTML=`<div class="dtitle">Conexión</div>
         <div class="dtype">${A.nombre} — ${B.nombre}</div>
@@ -448,7 +458,7 @@ function showDetail(){
           <dt>Puerto en ${escAttr(B.nombre)}</dt><dd>${portSel(ed0,'t')}</dd>
           <dt>Red</dt><dd><select id="e_net" style="width:100%;background:#0c1626;border:1px solid #26374f;border-radius:5px;color:#dbe9ff;font:inherit;font-size:11px;padding:2px 5px">
             <option value="">— automática —</option>
-            ${(doc.redes||[]).map(function(c){return '<option value="'+escAttr(c.n)+'"'+(ed0.net===c.n?' selected':'')+'>'+escAttr(c.n)+'</option>';}).join('')}
+            ${(S.doc.redes||[]).map(function(c){return '<option value="'+escAttr(c.n)+'"'+(ed0.net===c.n?' selected':'')+'>'+escAttr(c.n)+'</option>';}).join('')}
           </select></dd>
           <dt>Categoría</dt><dd><select id="e_cat" style="width:100%;background:#0c1626;border:1px solid #26374f;border-radius:5px;color:#dbe9ff;font:inherit;font-size:11px;padding:2px 5px">
             <option value="">— sin categoría —</option>
@@ -456,7 +466,7 @@ function showDetail(){
           </select></dd>
           <dt>Color</dt><dd><input type="color" id="e_col" value="${ed0.color||'#6ea8ff'}"
              style="width:34px;height:20px;border:none;background:none;padding:0"></dd>
-          <dt>Trazado</dt><dd>${(Array.isArray(ed0.pts)&&ed0.pts.length)?ed0.pts.length+' punto'+(ed0.pts.length>1?'s':'')+' a mano':(doc.estyle||'curvo')}</dd>
+          <dt>Trazado</dt><dd>${(Array.isArray(ed0.pts)&&ed0.pts.length)?ed0.pts.length+' punto'+(ed0.pts.length>1?'s':'')+' a mano':(S.doc.estyle||'curvo')}</dd>
           <dt>Etiqueta</dt><dd><input id="e_etq" value="${escAttr(ed0.etq)}" placeholder="1 Gbps fibra…"
              style="width:100%;background:#0c1626;border:1px solid #26374f;border-radius:5px;
              color:#dbe9ff;font:inherit;font-size:11px;padding:2px 5px"></dd>
@@ -481,14 +491,14 @@ function showDetail(){
           var id=(side==='s')?ed0.s:ed0.t;
           var cur=(side==='s')?ed0.pA:ed0.pB;
           if(np===cur)return;
-          var busy=doc.edges.filter(function(x){
+          var busy=S.doc.edges.filter(function(x){
             if(x===ed0)return false;
             if(side==='s')return x.s===id&&x.pA===np;
             return x.t===id&&x.pB===np;
           })[0];
           if(busy){
-            var otra=byId[busy.s===id?busy.t:busy.s];
-            if(!confirm('El puerto '+np+' de '+(byId[id]||{}).nombre+' ya est\u00e1 ocupado por '+(otra?otra.nombre:'otro equipo')+'. \u00bfIntercambiar los dos puertos?')){ showDetail(); return; }
+            var otra=S.byId[busy.s===id?busy.t:busy.s];
+            if(!confirm('El puerto '+np+' de '+(S.byId[id]||{}).nombre+' ya est\u00e1 ocupado por '+(otra?otra.nombre:'otro equipo')+'. \u00bfIntercambiar los dos puertos?')){ showDetail(); return; }
           }
           snap();
           if(side==='s')ed0.pA=np; else ed0.pB=np;
@@ -515,7 +525,7 @@ function showDetail(){
       const bb=document.getElementById('e_bend'); if(bb)bb.onclick=()=>{ed0.pts=[];delete ed0.bx;delete ed0.by;save();render();showDetail();};
       const dl=document.getElementById('e_dellink'); if(dl)dl.onclick=()=>{
         if(!confirm('\u00bfEliminar el enlace entre '+A.nombre+' y '+B.nombre+'?'))return;
-        snap(); doc.edges=doc.edges.filter(x=>x!==ed0); state.esel=null;
+        snap(); S.doc.edges=S.doc.edges.filter(x=>x!==ed0); state.esel=null;
         save(); rebuild(); render(); renderList(); showDetail();
       };
       const cb2=document.getElementById('e_clean'); if(cb2)cb2.onclick=()=>{var q=pruneEdgePoints(ed0);snap();save();render();showDetail();if(!q)alert('No hab\u00eda puntos redundantes.');};
@@ -525,9 +535,9 @@ function showDetail(){
       return;
     }
   }
-  const n=state.sel?byId[state.sel]:null;
+  const n=state.sel?S.byId[state.sel]:null;
   if(state.path&&state.path.length&&!state.sel){
-    var arr=state.path.map(function(i){return byId[i];}).filter(Boolean);
+    var arr=state.path.map(function(i){return S.byId[i];}).filter(Boolean);
     app.classList.add('sel');
     d.innerHTML='<div class="dtitle">Ruta \u00b7 '+arr.length+' saltos</div>'+
       '<div class="dtype">'+escAttr(arr[0].nombre)+' \u2192 '+escAttr(arr[arr.length-1].nombre)+'</div>'+
@@ -541,7 +551,7 @@ function showDetail(){
     return;
   }
   if(!n&&state.msel.size){
-    const arr=[...state.msel].map(i=>byId[i]).filter(Boolean);
+    const arr=[...state.msel].map(i=>S.byId[i]).filter(Boolean);
     app.classList.add('sel');
     d.innerHTML=`<div class="dtitle">${arr.length} equipos seleccionados</div>
       <div class="dtype" style="color:#8fb3dd">Arrastra cualquiera de ellos para moverlos juntos</div>

@@ -1,9 +1,18 @@
+import { S } from './00-store.js';
+import { TYPE, state } from './01-base.js';
+import { capFor, hostOf, save } from './02-modelo.js';
+import { cabColor, col } from './04a-geometria.js';
+import { render, renderList, select, v } from './04b-render-mapa.js';
+import { escAttr } from './04c-ficha-formularios.js';
+import { exportRackPNG, renderRack } from './08-rack.js';
+import { ppDropNode, ppMakeNode, ppMigrate, ppTotalOf } from './08c-conexiones.js';
+import { RACK, svg, t } from './dom.js';
 // ---------- armarios reales (rack con U configurables) ----------
-// Modelo: doc.racks = [{id, n, u, items:[{k:'dev'|'pp', id?, n?, u0, u, ports?, links?}]}]
+// Modelo: S.doc.racks = [{id, n, u, items:[{k:'dev'|'pp', id?, n?, u0, u, ports?, links?}]}]
 // u0 = U más baja que ocupa el elemento (1..u). Se dibuja de arriba abajo.
 
 
-var ACCESORIOS=[
+export var ACCESORIOS=[
   {k:'bandeja',  n:'Bandeja',                u:1, col:'#64748b'},
   {k:'bandeja2', n:'Bandeja 2U',             u:2, col:'#64748b'},
   {k:'escobilla',n:'Escobilla',              u:1, col:'#475569'},
@@ -12,9 +21,9 @@ var ACCESORIOS=[
   {k:'ventilador',n:'Ventilador',            u:2, col:'#38bdf8'},
   {k:'ciego',    n:'Ciego',                  u:1, col:'#334155'}
 ];
-function accById(k){ return ACCESORIOS.filter(function(a){return a.k===k;})[0]||ACCESORIOS[0]; }
+export function accById(k){ return ACCESORIOS.filter(function(a){return a.k===k;})[0]||ACCESORIOS[0]; }
 
-function rackUOf(n){
+export function rackUOf(n){
   var fijo=parseInt(n&&n.u);
   if(fijo>0)return Math.max(1,Math.min(8,fijo));
   var t=n&&n.tipo;
@@ -23,21 +32,21 @@ function rackUOf(n){
   return 1;
 }
 
-function armariosInit(){
-  if(!Array.isArray(doc.racks)){
-    doc.racks=armariosDesdeZonas();
+export function armariosInit(){
+  if(!Array.isArray(S.doc.racks)){
+    S.doc.racks=armariosDesdeZonas();
     save();
   }
-  doc.racks.forEach(function(r){
+  S.doc.racks.forEach(function(r){
     if(!Array.isArray(r.items))r.items=[];
     r.u=Math.max(6,Math.min(48,parseInt(r.u)||42));
     r.items.forEach(function(it){ if(!it.k)it.k='dev'; });
   });
 }
 
-function armariosDesdeZonas(){
+export function armariosDesdeZonas(){
   var out=[], porZ={};
-  nodes.forEach(function(n){ var z=n.zona||'Sin zona'; (porZ[z]=porZ[z]||[]).push(n); });
+  S.nodes.forEach(function(n){ var z=n.zona||'Sin zona'; (porZ[z]=porZ[z]||[]).push(n); });
   var i=0;
   Object.keys(porZ).sort(function(a,b){return a.localeCompare(b,'es');}).forEach(function(z){
     var devs=porZ[z].slice().sort(function(a,b){
@@ -58,18 +67,18 @@ function armariosDesdeZonas(){
   return out;
 }
 
-function currentRack(){
-  if(!Array.isArray(doc.racks)||!doc.racks.length)return null;
+export function currentRack(){
+  if(!Array.isArray(S.doc.racks)||!S.doc.racks.length)return null;
   var id=state.rackId;
-  var r=doc.racks.filter(function(x){return x.id===id;})[0];
-  if(!r){ r=doc.racks[0]; state.rackId=r.id; }
+  var r=S.doc.racks.filter(function(x){return x.id===id;})[0];
+  if(!r){ r=S.doc.racks[0]; state.rackId=r.id; }
   return r;
 }
 
 
 // inserta "extra" U en el armario a partir de la altura del elemento idx:
 // lo que esté por encima sube, y el armario crece lo mismo
-function insertarU(r, idx, extra){
+export function insertarU(r, idx, extra){
   if(!(extra>0)) return;
   var it=r.items[idx]; if(!it) return;
   var base=(it.u0||1);
@@ -81,7 +90,7 @@ function insertarU(r, idx, extra){
   });
   r.u=Math.min(48, (parseInt(r.u)||42)+extra);
 }
-function rackOcupados(r,skip){
+export function rackOcupados(r,skip){
   var m={};
   r.items.forEach(function(it){
     if(it===skip)return;
@@ -92,12 +101,12 @@ function rackOcupados(r,skip){
 }
 
 // y de la fila superior del elemento
-function yDeU(u0,h,uTotal,U){
+export function yDeU(u0,h,uTotal,U){
   var fila=uTotal-(u0+h-1);        // 0 = arriba del todo
   return {y:26+fila*U};
 }
 
-function portStrip(px1,px2,y,h,id){
+export function portStrip(px1,px2,y,h,id){
   var cap=Math.min(24, capFor(id));
   var band=px2-px1;
   var step=Math.min(16, band/cap);
@@ -108,7 +117,7 @@ function portStrip(px1,px2,y,h,id){
   var ty=y+Math.max(0,(h-sh-stripH)/2);
   var s='';
   for(var q=1;q<=cap;q++){
-    var e=doc.edges.filter(function(x){return (x.s===id&&x.pA===q)||(x.t===id&&x.pB===q);})[0];
+    var e=S.doc.edges.filter(function(x){return (x.s===id&&x.pA===q)||(x.t===id&&x.pB===q);})[0];
     var lc=e?(cabColor(e)||'#4f8cff'):'';
     var bx=px0+(q-1)*step;
     var w=Math.max(3,step-1.8);
@@ -122,7 +131,7 @@ function portStrip(px1,px2,y,h,id){
   return s;
 }
 
-function renderArmarios(){
+export function renderArmarios(){
   if(typeof ppMigrate==='function'){ try{ ppMigrate(); }catch(e){} }
   var wrap=document.getElementById('rack');
   if(!wrap)return;
@@ -130,11 +139,11 @@ function renderArmarios(){
   var r=currentRack();
   if(!r){ wrap.innerHTML='<div class="empty" style="padding:20px">Sin armarios</div>'; return; }
 
-  var opts=doc.racks.map(function(x){
+  var opts=S.doc.racks.map(function(x){
     return '<option value="'+x.id+'"'+(x.id===r.id?' selected':'')+'>'+escAttr(x.n)+' ('+x.u+'U)</option>';
   }).join('');
   var _us={}; r.items.forEach(function(it){ if(it.k==='dev'&&it.id)_us[it.id]=1; (it.kids||[]).forEach(function(k){ if(k.id)_us[k.id]=1; }); });
-  var libres=nodes.filter(function(n){ return !_us[n.id]; });
+  var libres=S.nodes.filter(function(n){ return !_us[n.id]; });
   var selDev='<select id="armadd" class="rkz"><option value="">+ Equipo…</option>'+
     libres.slice().sort(function(a,b){return a.nombre.localeCompare(b.nombre,'es');})
       .map(function(n){return '<option value="'+n.id+'">'+escAttr(n.nombre)+'</option>';}).join('')+'</select>';
@@ -198,7 +207,7 @@ function renderArmarios(){
         var rows=Math.max(1,Math.ceil(kids.length/cols));
         var cw=(W-24)/cols, rh=avail/rows;
         kids.forEach(function(k,ki){
-          var nd=byId[k.id]; if(!nd)return;
+          var nd=S.byId[k.id]; if(!nd)return;
           var cc=ki%cols, rr=Math.floor(ki/cols);
           var kh=Math.max(6,Math.min(rh-1.6,44));
           var kfs=Math.max(6,Math.min(10.5,kh-2.6));
@@ -265,8 +274,8 @@ function renderArmarios(){
           s+='<rect x="'+ox+'" y="'+(ry+sockH+1).toFixed(1)+'" width="'+blockW+'" height="'+stripH+'" rx="1" fill="#c9d4e2" opacity=".92"/>';
         }
         var pnid=it.nid;
-        var ee=pnid?doc.edges.filter(function(e){return (e.s===pnid&&e.pA===p)||(e.t===pnid&&e.pB===p);})[0]:null;
-        var oth=ee?(byId[ee.s===pnid?ee.t:ee.s]||{}):null;
+        var ee=pnid?S.doc.edges.filter(function(e){return (e.s===pnid&&e.pA===p)||(e.t===pnid&&e.pB===p);})[0]:null;
+        var oth=ee?(S.byId[ee.s===pnid?ee.t:ee.s]||{}):null;
         var lcol=ee?(cabColor(ee)||'#4f8cff'):'';
         var bx2=ox+c*pw+(c>=Math.ceil(per/2)?huecoG:0);
         var w2=Math.max(4,pw-2.6);
@@ -277,7 +286,7 @@ function renderArmarios(){
       }
       s+='</g>';
     } else {
-      var n=byId[it.id];
+      var n=S.byId[it.id];
       if(!n){ return; }
       var c=col(n);
       s+='<g class="armitem" data-idx="'+idx+'" data-id="'+n.id+'" data-y="'+y+'">';
@@ -302,13 +311,13 @@ function renderArmarios(){
 }
 
 
-function colision(r,it){
+export function colision(r,it){
   var occ=rackOcupados(r,it);
   var top=(it.u0||1)+(it.u||1)-1;
   for(var u=it.u0||1;u<=top;u++){ if(occ[u])return true; }
   return false;
 }
-function ajustarU(r,v){
+export function ajustarU(r,v){
   var occ={}, out=[], fuera=[];
   function marca(it){ var h=it.u||1; for(var k=0;k<h;k++) occ[(it.u0||1)+k]=1; }
   r.items.forEach(function(it){
@@ -330,7 +339,7 @@ function ajustarU(r,v){
   return perdidos;
 }
 
-function bindArmarios(){
+export function bindArmarios(){
   var r=currentRack(); if(!r)return;
   Array.prototype.forEach.call(document.querySelectorAll('[data-rm]'),function(b){
     b.onclick=function(){ state.rackMode=b.getAttribute('data-rm'); renderRack(); };
@@ -352,7 +361,7 @@ function bindArmarios(){
   var add=document.getElementById('armadd');
   if(add)add.onchange=function(){
     var id=add.value; if(!id)return;
-    var n=byId[id]; if(!n)return;
+    var n=S.byId[id]; if(!n)return;
     var h=rackUOf(n), occ=rackOcupados(r,null), u0=0;
     for(var u=r.u-h+1;u>=1;u--){
       var libre=true;
@@ -386,7 +395,7 @@ function bindArmarios(){
       it.u=nu;
       var fuera=colision(r,it);
       if(fuera){ it.u=viejo; alert('No cabe: hay algo justo encima. Mueve ese elemento primero.'); return; }
-      if(it.k==='dev' && byId[it.id]) byId[it.id].u=nu;
+      if(it.k==='dev' && S.byId[it.id]) S.byId[it.id].u=nu;
       save(); renderArmarios();
     };
   });
@@ -417,15 +426,15 @@ function bindArmarios(){
   var nw=document.getElementById('rknew');
   if(nw)nw.onclick=function(){
     var id='rk'+Date.now().toString(36);
-    doc.racks.push({id:id,n:'Armario '+(doc.racks.length+1),u:42,items:[]});
+    S.doc.racks.push({id:id,n:'Armario '+(S.doc.racks.length+1),u:42,items:[]});
     state.rackId=id; save(); renderArmarios();
   };
   var del=document.getElementById('rkdel');
   if(del)del.onclick=function(){
-    if(doc.racks.length<2){ alert('Debe quedar al menos un armario.'); return; }
+    if(S.doc.racks.length<2){ alert('Debe quedar al menos un armario.'); return; }
     if(!confirm('¿Borrar el armario «'+r.n+'»? Los equipos siguen en el mapa.'))return;
-    doc.racks=doc.racks.filter(function(x){return x.id!==r.id;});
-    state.rackId=doc.racks[0].id; save(); renderArmarios();
+    S.doc.racks=S.doc.racks.filter(function(x){return x.id!==r.id;});
+    state.rackId=S.doc.racks[0].id; save(); renderArmarios();
   };
   var png=document.getElementById('rkpng2');
   if(png)png.onclick=function(){ exportRackPNG(); };
@@ -482,22 +491,22 @@ function bindArmarios(){
 }
 
 // rellena de una vez los 24 puertos de un patch panel con el mismo número de puerto del switch
-function enlazarPatchCompleto(itIdx){
+export function enlazarPatchCompleto(itIdx){
   var r=currentRack(); if(!r)return;
   var it=r.items[itIdx]; if(!it||it.k!=='pp')return;
-  var sws=nodes.filter(function(n){return n.tipo==='switch';});
+  var sws=S.nodes.filter(function(n){return n.tipo==='switch';});
   if(!sws.length){ alert('No hay switches.'); return; }
   var nombres=sws.map(function(s,i2){return (i2+1)+') '+s.nombre+' ('+capFor(s.id)+' puertos)';}).join('\n');
   var p2=prompt('Enlazar todos los puertos con el switch n\u00ba:\n\n'+nombres,'1');
   if(p2===null)return;
   var sw=sws[parseInt(p2)-1]||sws[0];
-  var nd=it.nid&&byId[it.nid];
+  var nd=it.nid&&S.byId[it.nid];
   if(!nd){ try{ nd=ppMakeNode(it); }catch(e){ return; } }
   var t2=ppTotalOf(it), cap=Math.min(t2.tot, parseInt(sw.puertos)||capFor(sw.id));
-  doc.edges=doc.edges.filter(function(e){ return !(e.s===nd.id||e.t===nd.id); });
+  S.doc.edges=S.doc.edges.filter(function(e){ return !(e.s===nd.id||e.t===nd.id); });
   for(var q=1;q<=cap;q++){
     var hs=hostOf(nd.id,sw.id);
-    doc.edges.push({s:nd.id,t:sw.id,h:hs.id,port:q,pA:q,pB:q});
+    S.doc.edges.push({s:nd.id,t:sw.id,h:hs.id,port:q,pA:q,pB:q});
   }
   save(); renderArmarios(); render(); renderList();
 }

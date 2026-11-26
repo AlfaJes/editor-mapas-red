@@ -1,14 +1,23 @@
-function noteAt(x,y){
-  var hit=(doc.notes||[]).filter(function(nn){
+import { S } from './00-store.js';
+import { state } from './01-base.js';
+import { save, snap } from './02-modelo.js';
+import { ZBOX } from './03-layout.js';
+import { col, sn } from './04a-geometria.js';
+import { render } from './04b-render-mapa.js';
+import { escAttr } from './04c-ficha-formularios.js';
+import { noteLines } from './10d-guardado-notas.js';
+import { svg, t } from './dom.js';
+export function noteAt(x,y){
+  var hit=(S.doc.notes||[]).filter(function(nn){
     var nb=noteBox(nn.id);
     return nb&&x>=nb.x&&x<=nb.x+nb.w&&y>=nb.y&&y<=nb.y+nb.h;
   })[0];
   return hit?hit.id:null;
 }
-function snapArrowEnd(a,end){
+export function snapArrowEnd(a,end){
   var p = end===2?[a.x2,a.y2]:[a.x1,a.y1];
   var best=null,bd=1e9;
-  nodes.forEach(function(n){
+  S.nodes.forEach(function(n){
     var d=Math.sqrt(Math.pow(n.x-p[0],2)+Math.pow(n.y-p[1],2));
     if(d<bd){bd=d;best=n;}
   });
@@ -30,31 +39,31 @@ function snapArrowEnd(a,end){
     }
   }
 }
-var adrag=null;
-function zoneAt(x,y){
+S.adrag=null;
+export function zoneAt(x,y){
   var b=ZBOX.filter(function(q){return x>=q.x&&x<=q.x+q.w&&y>=q.y&&y<=q.y+q.h;})[0];
   return b?b.z:null;
 }
-function zoneCenter(z){
+export function zoneCenter(z){
   var b=ZBOX.filter(function(q){return q.z===z;})[0];
   return b?[b.x+b.w/2,b.y+b.h/2]:null;
 }
-function boxOf(z){ return ZBOX.filter(function(q){return q.z===z;})[0]||null; }
-function noteBox(id){
-  var nn=(doc.notes||[]).filter(function(x){return x.id===id;})[0];
+export function boxOf(z){ return ZBOX.filter(function(q){return q.z===z;})[0]||null; }
+export function noteBox(id){
+  var nn=(S.doc.notes||[]).filter(function(x){return x.id===id;})[0];
   if(!nn)return null;
   var x=(typeof nn._x==='number')?nn._x:nn.x, y=(typeof nn._y==='number')?nn._y:nn.y;
   return {x:x,y:y,w:nn.w||220,h:nn.h||40};
 }
-function rawPt(a,end){
+export function rawPt(a,end){
   var nid=(end===2)?a.n2:a.n1, zid=(end===2)?a.z2:a.z1;
-  if(nid&&byId[nid])return [byId[nid].x,byId[nid].y];
+  if(nid&&S.byId[nid])return [S.byId[nid].x,S.byId[nid].y];
   var tid=(end===2)?a.nt2:a.nt1;
   if(tid){var nb=noteBox(tid); if(nb)return [nb.x+nb.w/2,nb.y+nb.h/2];}
   if(zid){var b=boxOf(zid); if(b)return [b.x+b.w/2,b.y+b.h/2];}
   return (end===2)?[a.x2,a.y2]:[a.x1,a.y1];
 }
-function borderPoint(b,from){
+export function borderPoint(b,from){
   if(!b)return from;
   var cx=b.x+b.w/2, cy=b.y+b.h/2;
   var fx=from[0], fy=from[1];
@@ -66,9 +75,9 @@ function borderPoint(b,from){
   var t=Math.min(Math.abs(tx),Math.abs(ty));
   return [cx+dx*t, cy+dy*t];
 }
-function arrowPt(a,end){
+export function arrowPt(a,end){
   var nid=(end===2)?a.n2:a.n1, zid=(end===2)?a.z2:a.z1;
-  if(nid&&byId[nid])return [byId[nid].x,byId[nid].y];
+  if(nid&&S.byId[nid])return [S.byId[nid].x,S.byId[nid].y];
   var tid=(end===2)?a.nt2:a.nt1;
   if(tid){
     var nb=noteBox(tid);
@@ -80,8 +89,8 @@ function arrowPt(a,end){
   }
   return (end===2)?[a.x2,a.y2]:[a.x1,a.y1];
 }
-function arrowsHTML(){
-  var arr=doc.arrows||[];
+export function arrowsHTML(){
+  var arr=S.doc.arrows||[];
   return arr.map(function(a){
     var col=a.col||'#ffd7a1', sw=a.sw||2.2;
     var P1=arrowPt(a,1), P2=arrowPt(a,2);
@@ -129,18 +138,18 @@ function arrowsHTML(){
     return s+'</g>';
   }).join('');
 }
-function addArrow(){
+export function addArrow(){
   var cx=(-t.x+svg.clientWidth/2)/t.k, cy=(-t.y+svg.clientHeight/2)/t.k;
   snap();
   var a={id:'ar'+Date.now().toString(36),x1:sn(cx-100),y1:sn(cy+30),x2:sn(cx+90),y2:sn(cy-30),col:'#ffd7a1',sw:2.2,t:''};
-  doc.arrows=(doc.arrows||[]).concat([a]);
+  S.doc.arrows=(S.doc.arrows||[]).concat([a]);
   state.arrowSel=a.id; state.sel=null; state.esel=null;
   save(); render();
   return a;
 }
-function openArrow(ar){
+export function openArrow(ar){
   if(!ar)return;
-  NT={kind:'arrow',e:null,ar:ar};
+  S.NT={kind:'arrow',e:null,ar:ar};
   state.noteId=null;
   document.getElementById('n_text').value=ar.t||'';
   document.getElementById('n_sz').value=ar.sw||2;

@@ -1,13 +1,21 @@
+import { S } from './00-store.js';
+import { TYPE, state } from './01-base.js';
+import { capFor, hostOf, rebuild, save, syncRackPort } from './02-modelo.js';
+import { cabColor, col } from './04a-geometria.js';
+import { render, renderList, v } from './04b-render-mapa.js';
+import { escAttr } from './04c-ficha-formularios.js';
+import { colision, renderArmarios } from './08b-armarios.js';
+import { t } from './dom.js';
 // ---------- conexiones dentro del armario ----------
 // Clic en un puerto del patch panel o en un puerto de un equipo: elegir
 // qué equipo y qué puerto hay al otro lado.
 
 // color de un puerto de patch: el de la conexion que lleva, o el del equipo
-function linkColor(lk){
+export function linkColor(lk){
   if(!lk) return '';
-  var d=byId[lk.devId];
+  var d=S.byId[lk.devId];
   if(!d) return '#4f8cff';
-  var e=doc.edges.filter(function(x){
+  var e=S.doc.edges.filter(function(x){
     return (x.s===lk.devId&&x.pA===lk.port)||(x.t===lk.devId&&x.pB===lk.port);
   })[0];
   if(e){ var c=cabColor(e); if(c) return c; }
@@ -15,38 +23,38 @@ function linkColor(lk){
   return '#4f8cff';
 }
 
-var LN = { kind: null, idx: -1, port: 0, nodeId: null, rackId: null };
+S.LN = { kind: null, idx: -1, port: 0, nodeId: null, rackId: null };
 
-function lnkRack() {
+export function lnkRack() {
   var id = state.rackId;
-  return (doc.racks || []).filter(function (r) { return r.id === id; })[0] || null;
+  return (S.doc.racks || []).filter(function (r) { return r.id === id; })[0] || null;
 }
-function lnkPortsOf(id) { return Math.max(1, capFor(id)); }
-function lnkOcupados(id) {
+export function lnkPortsOf(id) { return Math.max(1, capFor(id)); }
+export function lnkOcupados(id) {
   var m = {};
-  doc.edges.forEach(function (e) {
+  S.doc.edges.forEach(function (e) {
     if (e.s === id) m[e.pA] = 1;
     if (e.t === id) m[e.pB] = 1;
   });
   return m;
 }
-function lnkFillDevs(selected) {
+export function lnkFillDevs(selected) {
   var sel = document.getElementById('lnk_dev');
-  var cands = nodes.filter(function (n) { return lnkPortsOf(n.id) > 0; });
-  if (LN.kind === 'dev') cands = cands.filter(function (n) { return n.id !== LN.nodeId; });
+  var cands = S.nodes.filter(function (n) { return lnkPortsOf(n.id) > 0; });
+  if (S.LN.kind === 'dev') cands = cands.filter(function (n) { return n.id !== S.LN.nodeId; });
   cands.sort(function (a, b) { return a.nombre.localeCompare(b.nombre, 'es'); });
   sel.innerHTML = '<option value="">— nada —</option>' + cands.map(function (n) {
     return '<option value="' + n.id + '"' + (n.id === selected ? ' selected' : '') + '>' + escAttr(n.nombre) + '</option>';
   }).join('');
   lnkFillPorts();
 }
-function lnkFillPorts(want) {
+export function lnkFillPorts(want) {
   var dev = document.getElementById('lnk_dev').value;
   var sel = document.getElementById('lnk_port');
   if (!dev) { sel.innerHTML = ''; return; }
   var cap = lnkPortsOf(dev);
   var ocu = lnkOcupados(dev);
-  var cur = (LN.kind === 'patch') ? null : (LN.port || null);
+  var cur = (S.LN.kind === 'patch') ? null : (S.LN.port || null);
   var ops = '', libres = 0, sel2 = false;
   for (var p = 1; p <= cap; p++) {
     var ocupado = ocu[p] && p !== cur;
@@ -61,10 +69,10 @@ function lnkFillPorts(want) {
     }
   }
 }
-function lnkOpenPatch(idx, port) {
+export function lnkOpenPatch(idx, port) {
   var r = lnkRack(); if (!r) return;
   var it = r.items[idx]; if (!it || it.k !== 'pp') return;
-  LN = { kind: 'patch', idx: idx, port: port, nodeId: null, rackId: r.id };
+  S.LN = { kind: 'patch', idx: idx, port: port, nodeId: null, rackId: r.id };
   var lk = (it.links || {})[port] || null;
   document.getElementById('lnk_t').textContent = 'Puerto ' + port + ' del patch panel';
   document.getElementById('lnk_sub').textContent = lk
@@ -74,14 +82,14 @@ function lnkOpenPatch(idx, port) {
   if (lk) lnkFillPorts(lk.port);
   document.getElementById('lnkm').classList.add('on');
 }
-function lnkOpenDev(nodeId, port) {
+export function lnkOpenDev(nodeId, port) {
   var r = lnkRack(); if (!r) return;
-  LN = { kind: 'dev', idx: -1, port: port, nodeId: nodeId, rackId: r ? r.id : null };
-  var n = byId[nodeId]; if (!n) return;
-  var ed = doc.edges.filter(function (e) {
+  S.LN = { kind: 'dev', idx: -1, port: port, nodeId: nodeId, rackId: r ? r.id : null };
+  var n = S.byId[nodeId]; if (!n) return;
+  var ed = S.doc.edges.filter(function (e) {
     return (e.s === nodeId && e.pA === port) || (e.t === nodeId && e.pB === port);
   })[0];
-  var other = ed ? byId[ed.s === nodeId ? ed.t : ed.s] : null;
+  var other = ed ? S.byId[ed.s === nodeId ? ed.t : ed.s] : null;
   document.getElementById('lnk_t').textContent = n.nombre + ' · puerto ' + port;
   document.getElementById('lnk_sub').textContent = other
     ? ('Ahora va a ' + other.nombre + ' P' + (ed.s === nodeId ? ed.pB : ed.pA) + '.')
@@ -90,42 +98,42 @@ function lnkOpenDev(nodeId, port) {
   if (other) lnkFillPorts(ed.s === nodeId ? ed.pB : ed.pA);
   document.getElementById('lnkm').classList.add('on');
 }
-function lnkClose() { document.getElementById('lnkm').classList.remove('on'); }
+export function lnkClose() { document.getElementById('lnkm').classList.remove('on'); }
 
-function lnkSave() {
+export function lnkSave() {
   var dev = document.getElementById('lnk_dev').value;
   var port = parseInt(document.getElementById('lnk_port').value, 10) || 0;
   if (!dev || !port) { alert('Elige equipo y puerto.'); return; }
   var _o = document.getElementById('lnk_port').options[document.getElementById('lnk_port').selectedIndex];
   if (_o && _o.disabled) { alert('Ese puerto ya está ocupado. Elige otro.'); return; }
-  var d = byId[dev]; if (!d) return;
-  if (LN.kind === 'patch') {
-    var r = lnkRack(); var it = r && r.items[LN.idx];
+  var d = S.byId[dev]; if (!d) return;
+  if (S.LN.kind === 'patch') {
+    var r = lnkRack(); var it = r && r.items[S.LN.idx];
     if (!it) return;
     it.links = it.links || {};
-    it.links[LN.port] = { devId: dev, dev: d.nombre, port: port };
+    it.links[S.LN.port] = { devId: dev, dev: d.nombre, port: port };
     save(); renderArmarios(); lnkClose();
   } else {
-    var a = LN.nodeId, b = dev;
+    var a = S.LN.nodeId, b = dev;
     if (a === b) { alert('No se puede conectar consigo mismo.'); return; }
     // liberar los puertos implicados
-    doc.edges = doc.edges.filter(function (e) {
-      return !((e.s === a && e.pA === LN.port) || (e.t === a && e.pB === LN.port) ||
+    S.doc.edges = S.doc.edges.filter(function (e) {
+      return !((e.s === a && e.pA === S.LN.port) || (e.t === a && e.pB === S.LN.port) ||
                (e.s === b && e.pA === port) || (e.t === b && e.pB === port));
     });
     var hs = hostOf(a, b);
-    var e2 = { s: a, t: b, h: hs.id, port: 0, pA: LN.port, pB: port };
-    doc.edges.push(e2); syncRackPort(e2);
+    var e2 = { s: a, t: b, h: hs.id, port: 0, pA: S.LN.port, pB: port };
+    S.doc.edges.push(e2); syncRackPort(e2);
     save(); rebuild(); render(); renderList(); renderArmarios(); lnkClose();
   }
 }
-function lnkDelete() {
-  if (LN.kind === 'patch') {
-    var r = lnkRack(); var it = r && r.items[LN.idx];
-    if (it && it.links) { delete it.links[LN.port]; save(); renderArmarios(); }
+export function lnkDelete() {
+  if (S.LN.kind === 'patch') {
+    var r = lnkRack(); var it = r && r.items[S.LN.idx];
+    if (it && it.links) { delete it.links[S.LN.port]; save(); renderArmarios(); }
   } else {
-    doc.edges = doc.edges.filter(function (e) {
-      return !((e.s === LN.nodeId && e.pA === LN.port) || (e.t === LN.nodeId && e.pB === LN.port));
+    S.doc.edges = S.doc.edges.filter(function (e) {
+      return !((e.s === S.LN.nodeId && e.pA === S.LN.port) || (e.t === S.LN.nodeId && e.pB === S.LN.port));
     });
     save(); rebuild(); render(); renderList(); renderArmarios();
   }
@@ -147,28 +155,28 @@ document.addEventListener('click', function(ev){
   if(pp){ ev.stopPropagation(); ev.stopImmediatePropagation();
     var ipp=+pp.getAttribute('data-pp'), ppp=+pp.getAttribute('data-p');
     var rr=lnkRack(), itp=rr&&rr.items[ipp];
-    if(itp&&itp.nid&&byId[itp.nid]){ lnkOpenDev(itp.nid, ppp); } else { lnkOpenPatch(ipp, ppp); }
+    if(itp&&itp.nid&&S.byId[itp.nid]){ lnkOpenDev(itp.nid, ppp); } else { lnkOpenPatch(ipp, ppp); }
     return; }
   var dp=t.closest('.devport');
   if(dp){ ev.stopPropagation(); ev.stopImmediatePropagation(); lnkOpenDev(dp.getAttribute('data-dp'), +dp.getAttribute('data-p')); return; }
 });
 
 // ---------- configuracion del patch panel ----------
-var PPX = { idx: -1 };
-function ppInfo() {
+S.PPX = { idx: -1 };
+export function ppInfo() {
   var per = Math.max(6, Math.min(48, parseInt(document.getElementById('ppm_pr').value, 10) || 24));
   var tot = Math.max(per, Math.min(per * 8, parseInt(document.getElementById('ppm_pt').value, 10) || per));
   return { per: per, tot: tot, u: Math.max(1, Math.ceil(tot / per)) };
 }
-function ppRefresh() {
+export function ppRefresh() {
   var v = ppInfo();
   document.getElementById('ppm_info').textContent =
     'Ocupará ' + v.u + 'U (' + v.per + ' por fila · ' + v.tot + ' en total)';
 }
-function ppOpen(idx) {
+export function ppOpen(idx) {
   var r = lnkRack(); if (!r) return;
   var it = r.items[idx]; if (!it || it.k !== 'pp') return;
-  PPX.idx = idx;
+  S.PPX.idx = idx;
   var per = it.ppr || 24, tot = it.pt || (per * (it.u || 1));
   document.getElementById('ppm_n').value = it.n || '';
   document.getElementById('ppm_pr').value = per;
@@ -176,8 +184,8 @@ function ppOpen(idx) {
   ppRefresh();
   document.getElementById('ppm').classList.add('on');
 }
-function ppSave() {
-  var r = lnkRack(); var it = r && r.items[PPX.idx]; if (!it) return;
+export function ppSave() {
+  var r = lnkRack(); var it = r && r.items[S.PPX.idx]; if (!it) return;
   var v = ppInfo();
   var viejo = it.u || 1;
   it.n = document.getElementById('ppm_n').value.trim() || ('Patch ' + v.tot + 'p');
@@ -190,16 +198,16 @@ function ppSave() {
     if (!ok) { it.u = viejo; alert('No cabe: el armario no tiene hueco para ' + v.u + 'U seguidas.'); return; }
   }
   // sincronizar el nodo del mapa (nombre y numero de puertos)
-  var nd=it.nid&&byId[it.nid];
+  var nd=it.nid&&S.byId[it.nid];
   if(!nd){ try{ nd=ppMakeNode(it); }catch(e){} }
   if(nd){ nd.nombre=it.n; nd.puertos=v.tot; }
   save(); renderArmarios(); render(); renderList();
   document.getElementById('ppm').classList.remove('on');
 }
-function ppDel() {
-  var r = lnkRack(); var it = r && r.items[PPX.idx]; if (!it) return;
+export function ppDel() {
+  var r = lnkRack(); var it = r && r.items[S.PPX.idx]; if (!it) return;
   try{ ppDropNode(it); }catch(e){}
-  r.items.splice(PPX.idx, 1);
+  r.items.splice(S.PPX.idx, 1);
   save(); renderArmarios(); render(); renderList();
   document.getElementById('ppm').classList.remove('on');
 }
@@ -223,9 +231,9 @@ document.addEventListener('click', function(ev){
 
 // ---------- equipos dentro de una bandeja ----------
 // La bandeja NO cambia de altura: los equipos van dentro del hueco libre.
-function trayWhere(id) {
+export function trayWhere(id) {
   var out = null;
-  (doc.racks || []).forEach(function (r) {
+  (S.doc.racks || []).forEach(function (r) {
     r.items.forEach(function (it) {
       if (it.k === 'dev' && it.id === id) out = { r: r, it: it };
       (it.kids || []).forEach(function (k, ki) { if (k.id === id) out = { r: r, it: it, ki: ki }; });
@@ -233,16 +241,16 @@ function trayWhere(id) {
   });
   return out;
 }
-function trayLibres(it) {
+export function trayLibres(it) {
   var usada = 0;
   (it.kids || []).forEach(function (k) { usada += Math.max(1, parseInt(k.h) || 1); });
   return Math.max(0, (it.u || 1) - usada);
 }
-function trayOpen(idx) {
+export function trayOpen(idx) {
   var r = lnkRack(); if (!r) return;
   var it = r.items[idx]; if (!it) return;
-  PPX.tray = idx;
-  var lib = nodes.slice().sort(function (a, b) { return String(a.nombre).localeCompare(String(b.nombre), 'es'); });
+  S.PPX.tray = idx;
+  var lib = S.nodes.slice().sort(function (a, b) { return String(a.nombre).localeCompare(String(b.nombre), 'es'); });
   document.getElementById('trm_dev').innerHTML = lib.map(function (n) {
     var w = trayWhere(n.id);
     var donde = w ? (w.ki !== undefined ? ' · ya en ' + w.it.n : ' · ya en ' + w.r.n) : '';
@@ -260,10 +268,10 @@ function trayOpen(idx) {
   document.getElementById('trm_ok').disabled = false;
   document.getElementById('trm').classList.add('on');
 }
-function trayClose() { document.getElementById('trm').classList.remove('on'); }
-function traySave() {
+export function trayClose() { document.getElementById('trm').classList.remove('on'); }
+export function traySave() {
   var r = lnkRack(); if (!r) return;
-  var it = r.items[PPX.tray]; if (!it) return trayClose();
+  var it = r.items[S.PPX.tray]; if (!it) return trayClose();
   var id = document.getElementById('trm_dev').value;
   var h = Math.max(1, parseInt(document.getElementById('trm_h').value) || 1);
   if (!id) { alert('Elige un equipo.'); return; }
@@ -334,50 +342,50 @@ function traySave() {
 })();
 
 // ---------- patch panel como equipo real del mapa ----------
-function ppTotalOf(it){
+export function ppTotalOf(it){
   var per=Math.max(6,Math.min(48,parseInt(it.ppr)||24));
   var tot=Math.max(per,Math.min(per*8,parseInt(it.pt)||(per*(parseInt(it.u)||1))));
   return {per:per,tot:tot,filas:Math.max(1,Math.ceil(tot/per))};
 }
-function ppSpot(){
+export function ppSpot(){
   for(var yy=110;yy<1000;yy+=95){
     for(var xx=110;xx<1600;xx+=150){
       var ok=true;
-      for(var i=0;i<nodes.length;i++){var n=nodes[i];
+      for(var i=0;i<S.nodes.length;i++){var n=S.nodes[i];
         if(Math.abs((n.x||0)-xx)<130&&Math.abs((n.y||0)-yy)<78){ok=false;break;}}
       if(ok)return {x:xx,y:yy};
     }
   }
   return {x:200,y:200};
 }
-function ppMakeNode(it){
+export function ppMakeNode(it){
   var t=ppTotalOf(it);
   var p=ppSpot();
   var id='pp'+Date.now().toString(36)+Math.random().toString(36).slice(2,5);
   var nd={id:id,nombre:(it.n||'Patch panel'),tipo:'patch',puertos:t.tot,
-    x:p.x,y:p.y,nx:p.x,ny:p.y,zona:(doc.zonasExtra&&doc.zonasExtra[0])||'',
+    x:p.x,y:p.y,nx:p.x,ny:p.y,zona:(S.doc.zonasExtra&&S.doc.zonasExtra[0])||'',
     ip:[],mac:'',modelo:'',so:'',u:1,perifs:[],roles:[],protocolos:[]};
-  doc.nodes.push(nd); it.nid=id; rebuild();
+  S.doc.nodes.push(nd); it.nid=id; rebuild();
   return nd;
 }
 // crea los nodos que falten y convierte los enlaces viejos (it.links) en cables de verdad
-function ppMigrate(){
+export function ppMigrate(){
   var changed=false;
-  (doc.racks||[]).forEach(function(r){
+  (S.doc.racks||[]).forEach(function(r){
     (r.items||[]).forEach(function(it){
       if(it.k!=='pp')return;
       var t=ppTotalOf(it);
-      var nd=(it.nid&&byId[it.nid]);
-      if(!nd){ ppMakeNode(it); nd=byId[it.nid]; changed=true; }
+      var nd=(it.nid&&S.byId[it.nid]);
+      if(!nd){ ppMakeNode(it); nd=S.byId[it.nid]; changed=true; }
       if((parseInt(nd.puertos)||0)!==t.tot){ nd.puertos=t.tot; changed=true; }
       if(it.links&&Object.keys(it.links).length){
         Object.keys(it.links).forEach(function(p){
-          var lk=it.links[p]; if(!lk||!lk.devId||!byId[lk.devId])return;
-          var ex=doc.edges.filter(function(e){
+          var lk=it.links[p]; if(!lk||!lk.devId||!S.byId[lk.devId])return;
+          var ex=S.doc.edges.filter(function(e){
             return (e.s===it.nid&&e.pA===+p)||(e.t===it.nid&&e.pB===+p);})[0];
           if(!ex){
             var hs=hostOf(it.nid,lk.devId);
-            doc.edges.push({s:it.nid,t:lk.devId,h:hs.id,port:+p,pA:+p,pB:Math.max(1,parseInt(lk.port)||1)});
+            S.doc.edges.push({s:it.nid,t:lk.devId,h:hs.id,port:+p,pA:+p,pB:Math.max(1,parseInt(lk.port)||1)});
           }
         });
         it.links={}; changed=true;
@@ -387,9 +395,9 @@ function ppMigrate(){
   if(changed){ rebuild(); }
   return changed;
 }
-function ppDropNode(it){
+export function ppDropNode(it){
   if(!it||!it.nid)return;
-  doc.nodes=doc.nodes.filter(function(n){return n.id!==it.nid;});
-  doc.edges=doc.edges.filter(function(e){return e.s!==it.nid&&e.t!==it.nid;});
+  S.doc.nodes=S.doc.nodes.filter(function(n){return n.id!==it.nid;});
+  S.doc.edges=S.doc.edges.filter(function(e){return e.s!==it.nid&&e.t!==it.nid;});
   it.nid=null; rebuild();
 }

@@ -1,11 +1,17 @@
-function ipSub(ip){ var p=String(ip||'').split('.'); return p.length===4?p.slice(0,3).join('.'):null; }
-function isL2(id){ var n=byId[id]; return !!n&&(n.tipo==='switch'||n.tipo==='otro'||n.tipo==='wifi'); }
-function l2Path(a,b){
+import { S } from './00-store.js';
+import { state } from './01-base.js';
+import { applyT, col } from './04a-geometria.js';
+import { render, v } from './04b-render-mapa.js';
+import { escAttr, showDetail } from './04c-ficha-formularios.js';
+import { svg, t, world } from './dom.js';
+export function ipSub(ip){ var p=String(ip||'').split('.'); return p.length===4?p.slice(0,3).join('.'):null; }
+export function isL2(id){ var n=S.byId[id]; return !!n&&(n.tipo==='switch'||n.tipo==='otro'||n.tipo==='wifi'); }
+export function l2Path(a,b){
   var prev={}, seen={}; seen[a]=1;
   var q=[a];
   while(q.length){
     var cur=q.shift();
-    var nbs=adj[cur]?Array.from(adj[cur]):[];
+    var nbs=S.adj[cur]?Array.from(S.adj[cur]):[];
     for(var i=0;i<nbs.length;i++){
       var nb=nbs[i]; if(seen[nb])continue;
       if(nb!==b&&!isL2(nb))continue;
@@ -16,8 +22,8 @@ function l2Path(a,b){
   }
   return null;
 }
-function pingAnalyze(){
-  var hosts=nodes.filter(function(n){return n.ip&&n.ip.length;});
+export function pingAnalyze(){
+  var hosts=S.nodes.filter(function(n){return n.ip&&n.ip.length;});
   var devSub={}, subDev={};
   hosts.forEach(function(n){
     devSub[n.id]=[];
@@ -29,7 +35,7 @@ function pingAnalyze(){
   });
   var subs=Object.keys(subDev);
   var se={};
-  nodes.forEach(function(n){
+  S.nodes.forEach(function(n){
     var ss=devSub[n.id]||[];
     for(var i=0;i<ss.length;i++)for(var j=i+1;j<ss.length;j++){
       (se[ss[i]]=se[ss[i]]||[]).push([ss[j],n.id]);
@@ -81,12 +87,12 @@ function pingAnalyze(){
       if(done){ ok++; okPairs.push({a:A.id,b:B.id}); } else noRoute.push({a:A.id,b:B.id,s1:sa[0],s2:sb[0]});
     }
   }
-  var noip=nodes.filter(function(n){return !(n.ip&&n.ip.length);}).length;
+  var noip=S.nodes.filter(function(n){return !(n.ip&&n.ip.length);}).length;
   return {hosts:hosts.length,subs:subs,subDev:subDev,ok:ok,okPairs:okPairs,viaRouter:viaRouter,noCable:noCable,noRoute:noRoute,noip:noip,
           pairs:hosts.length*(hosts.length-1)/2};
 }
-function pingRun(){
-  var r=pingAnalyze(); PINGRES=r;
+export function pingRun(){
+  var r=pingAnalyze(); S.PINGRES=r;
   if(document.getElementById('p_heat').classList.contains('on')) pingHeat(true);
   var sum=document.getElementById('p_sum'), body=document.getElementById('p_body');
   var fails=r.noCable.length+r.noRoute.length;
@@ -98,7 +104,7 @@ function pingRun(){
     '<div style="margin-top:6px;color:#6b83a3;font-size:11.5px">Simulación sobre el mapa: mismo segmento = camino por switches; entre subredes = camino por routers/firewalls con IP en ambas.'+
     (r.viaRouter?' <span style="color:#9ad2ff">'+r.viaRouter+' pares sólo alcanzables vía router</span>.':'')+'</div>';
   function row(f,txt,col){
-    var A=byId[f.a],B=byId[f.b];
+    var A=S.byId[f.a],B=S.byId[f.b];
     return '<div class="prowC" data-id="'+f.a+'" data-id2="'+f.b+'" style="cursor:pointer">'+
       '<b style="color:'+col+'">'+(txt||'\u2715')+'</b><span>'+escAttr(A?A.nombre:'?')+' \u2192 '+escAttr(B?B.nombre:'?')+
       '</span><i>'+escAttr(f.ipa||(A&&A.ip[0])||'')+' \u2192 '+escAttr(f.ipb||(B&&B.ip[0])||'')+'</i></div>';
@@ -117,7 +123,7 @@ function pingRun(){
   Object.keys(r.subDev).sort().forEach(function(s){
     var ds=r.subDev[s];
     html+='<div style="font-size:12px;color:#9db2d0;padding:3px 0"><b style="color:#dbe9ff">'+s+'.0/24</b> \u00b7 '+ds.length+' equipos: '+
-      ds.slice(0,8).map(function(d){return escAttr((byId[d.id]||{}).nombre||'?');}).join(', ')+(ds.length>8?'\u2026':'')+'</div>';
+      ds.slice(0,8).map(function(d){return escAttr((S.byId[d.id]||{}).nombre||'?');}).join(', ')+(ds.length>8?'\u2026':'')+'</div>';
   });
   body.innerHTML=html;
   Array.prototype.forEach.call(body.querySelectorAll('[data-id]'),function(el){
@@ -126,24 +132,24 @@ function pingRun(){
       pingPulse(bfsPath(a,b),false);
       document.getElementById('pmodal').classList.remove('on');
       state.sel=a; state.selMulti=new Set([a,b]); render(); showDetail();
-      if(byId[a]){ t.k=Math.max(0.7,Math.min(1.2,t.k)); t.x=-byId[a].x*t.k+svg.clientWidth/2; t.y=-byId[a].y*t.k+svg.clientHeight/2; applyT(); }
+      if(S.byId[a]){ t.k=Math.max(0.7,Math.min(1.2,t.k)); t.x=-S.byId[a].x*t.k+svg.clientWidth/2; t.y=-S.byId[a].y*t.k+svg.clientHeight/2; applyT(); }
     };
   });
 }
 
 /* ---------- capa visual del ping ---------- */
-var PINGRES=null, PINGANIM=null;
-function pingLayer(){
+S.PINGRES=null, S.PINGANIM=null;
+export function pingLayer(){
   var g=document.getElementById('gPing');
   if(!g){ g=document.createElementNS('http://www.w3.org/2000/svg','g'); g.id='gPing';
     var w=document.getElementById('world')||svg; w.appendChild(g); }
   return g;
 }
-function bfsPath(a,b){
+export function bfsPath(a,b){
   if(a===b)return [a];
   var prev={}, seen={}, q=[a]; seen[a]=1;
   while(q.length){
-    var cur=q.shift(), nbs=adj[cur]?Array.from(adj[cur]):[];
+    var cur=q.shift(), nbs=S.adj[cur]?Array.from(S.adj[cur]):[];
     for(var i=0;i<nbs.length;i++){
       var nb=nbs[i]; if(seen[nb])continue;
       seen[nb]=1; prev[nb]=cur;
@@ -153,31 +159,31 @@ function bfsPath(a,b){
   }
   return null;
 }
-function pingClear(){ var g=document.getElementById('gPing'); if(g)g.innerHTML=''; }
-function pingHalo(id,col,r,op){
-  var n=byId[id]; if(!n)return;
+export function pingClear(){ var g=document.getElementById('gPing'); if(g)g.innerHTML=''; }
+export function pingHalo(id,col,r,op){
+  var n=S.byId[id]; if(!n)return;
   var c=document.createElementNS('http://www.w3.org/2000/svg','circle');
   c.setAttribute('cx',n.x); c.setAttribute('cy',n.y); c.setAttribute('r',r||26);
   c.setAttribute('fill',col); c.setAttribute('opacity',op||.28);
   c.setAttribute('class','halo');
   pingLayer().appendChild(c);
 }
-function pingHeat(show){
+export function pingHeat(show){
   var g=document.getElementById('gPing'); if(g)g.querySelectorAll('.halo').forEach(function(x){x.remove();});
-  if(!show||!PINGRES)return;
+  if(!show||!S.PINGRES)return;
   var cnt={};
-  PINGRES.noCable.concat(PINGRES.noRoute).forEach(function(f){ cnt[f.a]=(cnt[f.a]||0)+1; cnt[f.b]=(cnt[f.b]||0)+1; });
-  nodes.forEach(function(n){
+  S.PINGRES.noCable.concat(S.PINGRES.noRoute).forEach(function(f){ cnt[f.a]=(cnt[f.a]||0)+1; cnt[f.b]=(cnt[f.b]||0)+1; });
+  S.nodes.forEach(function(n){
     var k=cnt[n.id]||0; if(!k)return;
-    var op=Math.min(.62,.10+k/Math.max(4,PINGRES.hosts)*1.5);
+    var op=Math.min(.62,.10+k/Math.max(4,S.PINGRES.hosts)*1.5);
     pingHalo(n.id,'#ff6b6b',24+k*0.5,op);
   });
-  nodes.forEach(function(n){ if(n.ip&&n.ip.length&&!cnt[n.id]) pingHalo(n.id,'#4be08a',22,.16); });
+  S.nodes.forEach(function(n){ if(n.ip&&n.ip.length&&!cnt[n.id]) pingHalo(n.id,'#4be08a',22,.16); });
   pingLayer().classList.add('on');
 }
-function pingPulse(path,ok,cb,speed){
+export function pingPulse(path,ok,cb,speed){
   if(!path||path.length<2){ if(cb)cb(); return null; }
-  var pts=path.map(function(id){var n=byId[id];return n?[n.x,n.y]:null;}).filter(Boolean);
+  var pts=path.map(function(id){var n=S.byId[id];return n?[n.x,n.y]:null;}).filter(Boolean);
   if(pts.length<2){ if(cb)cb(); return null; }
   var segs=[],total=0;
   for(var i=1;i<pts.length;i++){var d=Math.hypot(pts[i][0]-pts[i-1][0],pts[i][1]-pts[i-1][1])||0.01;segs.push(d);total+=d;}
@@ -198,21 +204,21 @@ function pingPulse(path,ok,cb,speed){
     var px=p1[0]+(p2[0]-p1[0])*r, py=p1[1]+(p2[1]-p1[1])*r;
     c.setAttribute('cx',px); c.setAttribute('cy',py);
     glow.setAttribute('cx',px); glow.setAttribute('cy',py);
-    if(k<1){ PINGANIM=requestAnimationFrame(step); }
+    if(k<1){ S.PINGANIM=requestAnimationFrame(step); }
     else{
       var last=c, lastG=glow; setTimeout(function(){ if(last.parentNode)last.remove(); if(lastG.parentNode)lastG.remove(); },160);
       if(cb)setTimeout(cb,90);
     }
   }
-  PINGANIM=requestAnimationFrame(step);
+  S.PINGANIM=requestAnimationFrame(step);
   return c;
 }
-function pingAnimPair(f,ok){
+export function pingAnimPair(f,ok){
   var p=bfsPath(f.a,f.b);
   pingPulse(p,ok);
 }
-function pingFailAt(id){
-  var n=byId[id]; if(!n)return;
+export function pingFailAt(id){
+  var n=S.byId[id]; if(!n)return;
   var t=document.createElementNS('http://www.w3.org/2000/svg','text');
   t.setAttribute('x',n.x+14); t.setAttribute('y',n.y-12);
   t.setAttribute('fill','#ff6b6b'); t.setAttribute('font-size','15'); t.setAttribute('font-weight','700');
@@ -220,21 +226,21 @@ function pingFailAt(id){
   pingLayer().appendChild(t);
   setTimeout(function(){ if(t.parentNode)t.remove(); },2600);
 }
-function nearestNb(from,to){
-  var A=byId[from],B=byId[to]; if(!A||!B)return null;
-  var nb=adj[from]?Array.from(adj[from]):[]; var best=null,bd=1e18;
+export function nearestNb(from,to){
+  var A=S.byId[from],B=S.byId[to]; if(!A||!B)return null;
+  var nb=S.adj[from]?Array.from(S.adj[from]):[]; var best=null,bd=1e18;
   nb.forEach(function(id){
-    var n=byId[id]; if(!n)return;
+    var n=S.byId[id]; if(!n)return;
     var d=Math.hypot(n.x-B.x,n.y-B.y);
     if(d<bd){bd=d;best=id;}
   });
   return best;
 }
-function pingAnimAll(){
-  if(!PINGRES)pingRun();
-  var greens=PINGRES.okPairs.map(function(f){return {f:f,p:bfsPath(f.a,f.b)};})
+export function pingAnimAll(){
+  if(!S.PINGRES)pingRun();
+  var greens=S.PINGRES.okPairs.map(function(f){return {f:f,p:bfsPath(f.a,f.b)};})
     .filter(function(x){return x.p&&x.p.length>1;}).slice(0,12);
-  var reds=PINGRES.noCable.slice(0,8).map(function(f){
+  var reds=S.PINGRES.noCable.slice(0,8).map(function(f){
     var nb=nearestNb(f.a,f.b);
     return {f:f,p:nb?[f.a,nb]:null};
   });
@@ -255,7 +261,7 @@ document.getElementById('p_run').onclick=pingRun;
 document.getElementById('p_heat').onclick=function(){
   var on=!this.classList.contains('on');
   this.classList.toggle('on',on);
-  if(on&&!PINGRES)pingRun();
+  if(on&&!S.PINGRES)pingRun();
   pingHeat(on);
 };
 document.getElementById('p_anim').onclick=function(){
@@ -264,7 +270,7 @@ document.getElementById('p_anim').onclick=function(){
   pingAnimAll();
 };
 document.getElementById('p_stop').onclick=function(){
-  try{ cancelAnimationFrame(PINGANIM); }catch(e){}
+  try{ cancelAnimationFrame(S.PINGANIM); }catch(e){}
   pingClear();
   document.getElementById('p_heat').classList.remove('on');
   document.getElementById('p_anim').classList.remove('on');

@@ -1,3 +1,5 @@
+import { applyT } from './04a-geometria.js';
+import { t } from './dom.js';
 // ---------- soporte táctil (tablet / móvil) ----------
 // Traduce los gestos a los mismos eventos de ratón que ya usa el mapa,
 // más pinza de dos dedos para el zoom.

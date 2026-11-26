@@ -1,4 +1,12 @@
-function renderCats(){
+import { S } from './00-store.js';
+import { DEFAULT_REDES, rebuild, save } from './02-modelo.js';
+import { cabCats, col, fit } from './04a-geometria.js';
+import { render, renderList } from './04b-render-mapa.js';
+import { escAttr, showDetail } from './04c-ficha-formularios.js';
+import { rebuildUI, setBtn } from './07-ui.js';
+import { renderCmodal } from './10a-ruta-revision.js';
+import { exportPNG } from './10b-export-imagen.js';
+export function renderCats(){
   var box=document.getElementById('rncat'); if(!box)return;
   box.innerHTML=cabCats().map(function(c,i){
     return '<div class="zrow" data-ci="'+i+'">'+
@@ -16,8 +24,8 @@ function renderCats(){
     b.onclick=function(){
       var i=+b.getAttribute('data-cdel'); var cat=cabCats()[i];
       if(!confirm('¿Quitar la categoría «'+cat.n+'»? Los cables que la usan se quedarán sin categoría.'))return;
-      doc.edges.forEach(function(e){ if(e.cat===cat.n)delete e.cat; });
-      doc.cabcats.splice(i,1); save(); render(); renderRedes();
+      S.doc.edges.forEach(function(e){ if(e.cat===cat.n)delete e.cat; });
+      S.doc.cabcats.splice(i,1); save(); render(); renderRedes();
     };
   });
 }
@@ -29,9 +37,9 @@ document.getElementById('cnadd').onclick=function(){
   cabCats().push({n:n,col:c}); document.getElementById('cnname').value='';
   save(); render(); renderRedes();
 };
-function renderRedes(){
+export function renderRedes(){
   var box=document.getElementById('rnlist'); if(!box)return;
-  var rs=doc.redes||DEFAULT_REDES();
+  var rs=S.doc.redes||DEFAULT_REDES();
   box.innerHTML=rs.map(function(r,i){
     return '<div class="zrow" style="grid-template-columns:1fr 130px 46px 34px">'+
       '<input class="rn-n" data-i="'+i+'" value="'+escAttr(r.n)+'" style="background:#0c1626;border:1px solid #26374f;border-radius:6px;color:#dbe9ff;font-size:12px;padding:5px 7px">'+
@@ -41,24 +49,24 @@ function renderRedes(){
   }).join('')||'<div class="empty">Sin redes</div>';
   box.querySelectorAll('.rn-n,.rn-p,.rn-c').forEach(function(el){
     el.onchange=function(){
-      var i=+el.dataset.i; var rs2=doc.redes||DEFAULT_REDES();
+      var i=+el.dataset.i; var rs2=S.doc.redes||DEFAULT_REDES();
       if(!rs2[i])return;
       if(el.classList.contains('rn-n'))rs2[i].n=el.value.trim()||rs2[i].n;
       if(el.classList.contains('rn-p'))rs2[i].pre=el.value.trim();
       if(el.classList.contains('rn-c'))rs2[i].col=el.value;
-      doc.redes=rs2; save(); rebuild(); rebuildUI(); render(); renderList(); showDetail(); renderRedes();
+      S.doc.redes=rs2; save(); rebuild(); rebuildUI(); render(); renderList(); showDetail(); renderRedes();
     };
   });
   box.querySelectorAll('[data-rdel]').forEach(function(b){
     b.onclick=function(){
-      var i=+b.dataset.rdel; var rs2=doc.redes||DEFAULT_REDES();
-      var usados=nodes.filter(function(n){return (n.nets||[]).indexOf(rs2[i].n)>=0;}).length;
+      var i=+b.dataset.rdel; var rs2=S.doc.redes||DEFAULT_REDES();
+      var usados=S.nodes.filter(function(n){return (n.nets||[]).indexOf(rs2[i].n)>=0;}).length;
       if(usados && !confirm('Hay '+usados+' equipos en «'+rs2[i].n+'». Si la quitas pasarán a la red sin prefijo. ¿Continuar?'))return;
-      rs2.splice(i,1); doc.redes=rs2; save(); rebuild(); rebuildUI(); render(); renderList(); renderRedes();
+      rs2.splice(i,1); S.doc.redes=rs2; save(); rebuild(); rebuildUI(); render(); renderList(); renderRedes();
     };
   });
 }
-function openRedes(){ var m=document.getElementById('moreMenu'); if(m)m.classList.remove('on');
+export function openRedes(){ var m=document.getElementById('moreMenu'); if(m)m.classList.remove('on');
   renderRedes(); renderCats(); document.getElementById('rnm').classList.add('on'); }
 (function(){ var b=document.getElementById('bNets'); if(b)b.onclick=openRedes; })();
 (function(){ var b=document.getElementById('bNets2'); if(b)b.onclick=openRedes; })();
@@ -66,10 +74,10 @@ document.getElementById('rnclose').onclick=function(){ document.getElementById('
 document.getElementById('rnadd').onclick=function(){
   var n=document.getElementById('rnname').value.trim(), p=document.getElementById('rnpre').value.trim(), c=document.getElementById('rncol').value;
   if(!n){ document.getElementById('rnname').focus(); return; }
-  doc.redes=doc.redes||DEFAULT_REDES();
-  if(doc.redes.some(function(r){return r.n===n;})){ alert('Ya existe una red con ese nombre'); return; }
-  if(p && doc.redes.some(function(r){return r.pre===p;})){ if(!confirm('Ya hay una red con el prefijo '+p+'. Las IPs se asignar\u00e1n a la primera que coincida. \u00bfContinuar?'))return; }
-  doc.redes.push({n:n,pre:p,col:c});
+  S.doc.redes=S.doc.redes||DEFAULT_REDES();
+  if(S.doc.redes.some(function(r){return r.n===n;})){ alert('Ya existe una red con ese nombre'); return; }
+  if(p && S.doc.redes.some(function(r){return r.pre===p;})){ if(!confirm('Ya hay una red con el prefijo '+p+'. Las IPs se asignar\u00e1n a la primera que coincida. \u00bfContinuar?'))return; }
+  S.doc.redes.push({n:n,pre:p,col:c});
   document.getElementById('rnname').value=''; document.getElementById('rnpre').value='';
   save(); rebuild(); rebuildUI(); render(); renderList(); showDetail(); renderRedes();
 };
@@ -88,7 +96,7 @@ document.getElementById('bPres').onclick=function(){
   var on=!document.body.classList.contains('present');
   document.body.classList.toggle('present',on);
   setBtn('bPres',on);
-  var nm=document.getElementById('presname'); if(nm)nm.textContent=doc.title||'Mapa de red';
+  var nm=document.getElementById('presname'); if(nm)nm.textContent=S.doc.title||'Mapa de red';
   setTimeout(function(){ fit(); },80);
 };
 document.getElementById('presbar').onclick=function(){
