@@ -52,6 +52,11 @@ const TYPEF={
   {k:'roles',l:'Roles y servicios',type:'chips',opts:['Dominio AD','DNS','DHCP','Ficheros','SQL','Virtualización','Backup','Web','Correo','Antivirus']},
   {k:'vms',l:'Nº de máquinas virtuales',ph:'3'}
  ],
+ patch:[
+  {k:'puertos',l:'Nº de puertos',ph:'24'},
+  {k:'tipo_patch',l:'Tipo de panel',type:'select',opts:['','24 puertos 1U','48 puertos 2U','Fibra / otro']},
+  {k:'ubic_rack',l:'Armario y U',ph:'Rack Oficinas · U12'}
+ ],
  switch:[
   {k:'puertos',l:'Nº de puertos',ph:'24'},
   {k:'gestionable',l:'Gestionable',type:'select',opts:['','Sí','No']},
