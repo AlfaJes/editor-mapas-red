@@ -140,7 +140,8 @@ function renderArmarios(){
       if(it.acc==='bandeja'||it.acc==='bandeja2'){
         var _usada=0; (it.kids||[]).forEach(function(k){ _usada+=Math.max(1,parseInt(k.h)||1); });
         var _libre=Math.max(0,(it.u||1)-_usada);
-        s+='<text class="armplus" data-tray="'+idx+'" x="'+(X0+W-60)+'" y="'+(y+13)+'" text-anchor="end" title="Anadir un equipo a esta bandeja">＋ equipo ('+_libre+'U libre'+( _libre===1?'':'s')+')</text>';
+        s+='<rect class="armplusbox" data-tray="'+idx+'" x="'+(X0+W-158)+'" y="'+(y+2)+'" width="100" height="15" rx="3" fill="#12301f" stroke="#3f7a58" opacity=".9"/>';
+        s+='<text class="armplus" data-tray="'+idx+'" x="'+(X0+W-62)+'" y="'+(y+13)+'" text-anchor="end" title="Anadir un equipo a esta bandeja">＋ equipo ('+_libre+'U)</text>';
         var kids=it.kids||[], base=y+hh-6, cum=0;
         kids.forEach(function(k,ki){
           var nd=byId[k.id]; if(!nd)return;
@@ -149,8 +150,18 @@ function renderArmarios(){
           s+='<g class="armkid" data-kid="'+idx+':'+ki+'">';
           s+='<rect x="'+(X0+10)+'" y="'+ky+'" width="'+(W-20)+'" height="'+kh+'" rx="2" fill="#16233a" stroke="#3a5578"/>';
           s+='<rect x="'+(X0+10)+'" y="'+ky+'" width="4" height="'+kh+'" rx="1.5" fill="'+(col(nd)||'#64748b')+'"/>';
-          s+='<text x="'+(X0+22)+'" y="'+(ky+kh/2+4)+'" class="cabn2">'+escAttr(String(nd.nombre||'').slice(0,24))+'</text>';
-          s+='<text x="'+(X0+200)+'" y="'+(ky+kh/2+4)+'" class="cabs">'+escAttr((TYPE[nd.tipo]||['',''])[1])+' · '+(k.h||1)+'U</text>';
+          var nmk=String(nd.nombre||''); if(nmk.length>20)nmk=nmk.slice(0,19)+'…';
+          s+='<text x="'+(X0+22)+'" y="'+(ky+kh/2+4)+'" class="cabn2">'+escAttr(nmk)+'<title>'+escAttr(nd.nombre)+' · '+escAttr((TYPE[nd.tipo]||['',''])[1])+' · '+(k.h||1)+'U</title></text>';
+          // puertos del equipo dentro de la bandeja
+          var kcap=Math.min(26,capFor(nd.id));
+          var kx1=X0+232, kx2=X0+W-52, kstep=Math.min(8,(kx2-kx1)/Math.max(1,kcap));
+          s+='<rect x="'+(kx1-3)+'" y="'+(ky+kh-11)+'" width="'+((kcap*kstep)+5).toFixed(1)+'" height="9" rx="2" fill="#0b1524" opacity=".6" pointer-events="none"/>';
+          for(var qk=1;qk<=kcap;qk++){
+            var eused=doc.edges.filter(function(e){return (e.s===nd.id&&e.pA===qk)||(e.t===nd.id&&e.pB===qk);})[0];
+            s+='<rect class="devport'+(eused?' on':'')+'" data-dp="'+nd.id+'" data-p="'+qk+'" x="'+(kx1+(qk-1)*kstep).toFixed(1)+'" y="'+(ky+kh-10)+'" width="'+Math.max(2,kstep-1.4).toFixed(1)+'" height="6" rx="1"'+
+               (eused?' style="fill:'+(cabColor(eused)||'#4f8cff')+'"':'')+
+               '><title>P'+qk+(eused?' (ocupado)':' (libre)')+'</title></rect>';
+          }
           s+='<text class="cabxx" data-kid="'+idx+':'+ki+'" x="'+(X0+W-16)+'" y="'+(ky+kh/2+4)+'" text-anchor="end">✕</text>';
           s+='</g>';
           cum+=kh+1;
@@ -320,7 +331,12 @@ function bindArmarios(){
       var v=prompt('Altura en U (1-'+maxU+'):', def);
       if(v===null)return;
       var nu=parseInt(v,10); if(!nu||nu<1)nu=1; if(nu>maxU)nu=maxU;
-      var viejo=it.u||1; it.u=nu;
+      var viejo=it.u||1;
+      if(Array.isArray(it.kids)&&it.kids.length){
+        var _oc=0; it.kids.forEach(function(k){ _oc+=Math.max(1,parseInt(k.h)||1); });
+        if(nu<_oc){ alert('No puede bajar de '+_oc+'U: dentro hay equipos que ocupan '+_oc+'U.'); return; }
+      }
+      it.u=nu;
       var fuera=colision(r,it);
       if(fuera){ it.u=viejo; alert('No cabe: hay algo justo encima. Mueve ese elemento primero.'); return; }
       if(it.k==='dev' && byId[it.id]) byId[it.id].u=nu;

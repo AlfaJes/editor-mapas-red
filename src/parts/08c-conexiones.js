@@ -271,9 +271,13 @@ function traySave() {
   ok.onclick = traySave;
   document.getElementById('trm_cancel').onclick = trayClose;
   document.getElementById('trm').addEventListener('click', function (e) { if (e.target.id === 'trm') trayClose(); });
+  document.addEventListener('pointerdown', function (ev) {
+    var t = ev.target.closest && ev.target.closest('[data-tray]');
+    if (t) { ev.stopPropagation(); ev.preventDefault(); trayOpen(+t.getAttribute('data-tray')); }
+  }, true);
   document.addEventListener('click', function (ev) {
     var t = ev.target.closest && ev.target.closest('[data-tray]');
-    if (t) { ev.stopPropagation(); trayOpen(+t.getAttribute('data-tray')); return; }
+    if (t) { ev.stopPropagation(); return; }
     var k = ev.target.closest && ev.target.closest('[data-kid]');
     if (k) {
       ev.stopPropagation();
