@@ -3,7 +3,7 @@ import { TYPE, state } from './01-base.js';
 import { capFor, hostOf, rebuild, save, syncRackPort } from './02-modelo.js';
 import { cabColor, col } from './04a-geometria.js';
 import { render, renderList, v } from './04b-render-mapa.js';
-import { escAttr } from './04c-ficha-formularios.js';
+import { escAttr, showDetail } from './04c-ficha-formularios.js';
 import { colision, renderArmarios } from './08b-armarios.js';
 import { t } from './dom.js';
 // ---------- conexiones dentro del armario ----------
@@ -97,7 +97,7 @@ export function lnkOpenPatch(idx, port) {
   document.getElementById('lnkm').classList.add('on');
 }
 export function lnkOpenDev(nodeId, port) {
-  var r = lnkRack(); if (!r) return;
+  var r = lnkRack();
   S.LN = { kind: 'dev', idx: -1, port: port, nodeId: nodeId, rackId: r ? r.id : null };
   var n = S.byId[nodeId]; if (!n) return;
   var ed = S.doc.edges.filter(function (e) {
@@ -148,7 +148,7 @@ export function lnkSave() {
     var hs = hostOf(a, b);
     var e2 = { s: a, t: b, h: hs.id, port: 0, pA: S.LN.port, pB: port };
     S.doc.edges.push(e2); syncRackPort(e2);
-    save(); rebuild(); render(); renderList(); renderArmarios(); lnkClose();
+    save(); rebuild(); render(); renderList(); renderArmarios(); showDetail(); lnkClose();
   }
 }
 export function lnkDelete() {
@@ -159,7 +159,7 @@ export function lnkDelete() {
     S.doc.edges = S.doc.edges.filter(function (e) {
       return !((e.s === S.LN.nodeId && e.pA === S.LN.port) || (e.t === S.LN.nodeId && e.pB === S.LN.port));
     });
-    save(); rebuild(); render(); renderList(); renderArmarios();
+    save(); rebuild(); render(); renderList(); renderArmarios(); showDetail();
   }
   lnkClose();
 }

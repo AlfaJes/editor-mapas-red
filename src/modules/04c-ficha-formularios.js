@@ -7,9 +7,14 @@ import { mineOn, pathHint, portGrid, render, renderList, select, v } from './04b
 import { addLink, delLink, delNode, saveEdit } from './05-mutaciones.js';
 import { setBtn } from './07-ui.js';
 import { openEdgeNote } from './10d-guardado-notas.js';
+import { lnkOpenDev } from './08c-conexiones.js';
 import { t } from './dom.js';
 export function readHTML(n){
-  const nb=[...S.adj[n.id]].map(x=>S.byId[x]).sort((a,b)=>a.nombre.localeCompare(b.nombre,'es'));
+  const nb=[...S.adj[n.id]].map(x=>{
+    const ed=S.doc.edges.find(e=>(e.s===n.id&&e.t===x)||(e.t===n.id&&e.s===x));
+    const p=ed?(ed.s===n.id?ed.pA:ed.pB):0;
+    return {id:x,nombre:(S.byId[x]||{}).nombre||'',tipo:(S.byId[x]||{}).tipo,port:p};
+  }).sort((a,b)=>a.nombre.localeCompare(b.nombre,'es'));
   return `<div class="dtitle">${n.nombre}${S.DUPS.has(n.id)?'<span class="badge">IP duplicada</span>':''}</div>
    <div class="dtype" style="color:${col(n)}">${(TYPE[n.tipo]||['','Equipo'])[1]} · ${n.zona}</div>
    <dl class="kv">
@@ -37,8 +42,12 @@ export function readHTML(n){
     })()}
    ${(n.tipo==='switch'||n.tipo==='router'||n.tipo==='firewall')?portGrid(n):''}
    <div class="hist"><h4>ENLACES (${nb.length})</h4>
-     ${nb.length?nb.map(x=>`<div class="hitem" data-id="${x.id}" style="display:flex;justify-content:space-between;gap:8px">
-       <span>${x.nombre}</span><span style="color:#7d93b3">${(TYPE[x.tipo]||['',''])[1]}</span></div>`).join('')
+     ${nb.length?nb.map(x=>`<div class="hitem" data-id="${x.id}" style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+       <span>${x.nombre}</span>
+       <span style="display:flex;align-items:center;gap:6px">
+         <span style="color:#7d93b3">${x.port?'P'+x.port:''}</span>
+         <button class="btn sm" data-chg="${x.port}" title="Cambiar la conexión de este puerto">⇄</button>
+       </span></div>`).join('')
        :'<div class="empty" style="padding:6px 0">Sin enlaces definidos</div>'}
    </div>
    <button class="btn" id="e_start" style="margin-top:10px;width:100%">✎ Editar este equipo</button>`;
@@ -596,6 +605,11 @@ export function showDetail(){
     }
   } else {
     d.querySelectorAll('.hitem').forEach(el=>el.onclick=()=>select(el.dataset.id,true));
+    d.querySelectorAll('[data-chg]').forEach(el=>el.onclick=(ev)=>{
+      ev.stopPropagation();
+      var p=parseInt(el.getAttribute('data-chg'),10)||0;
+      if(p) lnkOpenDev(n.id,p); else select(el.closest('.hitem').dataset.id,true);
+    });
     d.querySelectorAll('.pcell.on').forEach(el=>el.onclick=()=>select(el.dataset.id,true));
     d.querySelectorAll('.plist .prowC').forEach(el=>el.onclick=(ev)=>{ if(ev.target&&(ev.target.tagName==='SELECT'||ev.target.tagName==='OPTION'))return; if(el.dataset.id)select(el.dataset.id,true); });
     d.querySelectorAll('.plist .prow').forEach(el=>el.style.cursor='pointer');
