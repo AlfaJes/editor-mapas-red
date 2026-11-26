@@ -189,13 +189,14 @@ function renderArmarios(){
           s+='<text x="'+(kx+10)+'" y="'+(ky+kh/2+kfs/3)+'" class="cabn2" style="font-size:'+kfs.toFixed(1)+'px">'+escAttr(nmk)+'</text>';
           s+='<text class="cabxx" data-kid="'+idx+':'+ki+'" x="'+(kx+cw-12)+'" y="'+(ky+kh/2+3.2)+'" text-anchor="end" style="font-size:'+Math.max(7,Math.min(11,kh-2)).toFixed(1)+'px">✕</text>';
           // puertos del equipo, si hay sitio
-          if(kh>=16 && cw>=150){
+          if(kh>=7 && cw>=110){
             var kcap=Math.min(24,capFor(nd.id));
-            var pkx=kx+cw*0.52, pk2=kx+cw-30, pst=Math.min(7,(pk2-pkx)/Math.max(1,kcap));
-            s+='<rect x="'+(pkx-2)+'" y="'+(ky+kh-10)+'" width="'+((kcap*pst)+4).toFixed(1)+'" height="8" rx="2" fill="#0b1524" opacity=".6" pointer-events="none"/>';
+            var ptk=Math.max(2.5,Math.min(5,kh-5.5));
+            var pkx=kx+cw*0.46, pk2=kx+cw-26, pst=Math.min(8,(pk2-pkx)/Math.max(1,kcap));
+            s+='<rect x="'+(pkx-2)+'" y="'+(ky+kh-ptk-1.4).toFixed(1)+'" width="'+((kcap*pst)+4).toFixed(1)+'" height="'+(ptk+1.6).toFixed(1)+'" rx="1.5" fill="#0b1524" opacity=".6" pointer-events="none"/>';
             for(var qk=1;qk<=kcap;qk++){
               var eused=doc.edges.filter(function(e){return (e.s===nd.id&&e.pA===qk)||(e.t===nd.id&&e.pB===qk);})[0];
-              s+='<rect class="devport'+(eused?' on':'')+'" data-dp="'+nd.id+'" data-p="'+qk+'" x="'+(pkx+(qk-1)*pst).toFixed(1)+'" y="'+(ky+kh-9)+'" width="'+Math.max(2,pst-1.2).toFixed(1)+'" height="5" rx="1"'+
+              s+='<rect class="devport'+(eused?' on':'')+'" data-dp="'+nd.id+'" data-p="'+qk+'" x="'+(pkx+(qk-1)*pst).toFixed(1)+'" y="'+(ky+kh-ptk-0.6).toFixed(1)+'" width="'+Math.max(1.6,pst-1).toFixed(1)+'" height="'+ptk.toFixed(1)+'" rx=".8"'+
                  (eused?' style="fill:'+(cabColor(eused)||'#4f8cff')+'"':'')+
                  '><title>P'+qk+(eused?' (ocupado)':' (libre)')+'</title></rect>';
             }
