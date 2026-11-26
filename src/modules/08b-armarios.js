@@ -5,7 +5,7 @@ import { cabColor, col } from './04a-geometria.js';
 import { render, renderList, select, v } from './04b-render-mapa.js';
 import { escAttr } from './04c-ficha-formularios.js';
 import { exportRackPNG, renderRack } from './08-rack.js';
-import { ppDropNode, ppMakeNode, ppMigrate, ppTotalOf } from './08c-conexiones.js';
+import { ppApplyLinks, ppDropNode, ppMakeNode, ppMigrate, ppTotalOf } from './08c-conexiones.js';
 import { RACK, svg, t } from './dom.js';
 // ---------- armarios reales (rack con U configurables) ----------
 // Modelo: S.doc.racks = [{id, n, u, items:[{k:'dev'|'pp', id?, n?, u0, u, ports?, links?}]}]
@@ -514,10 +514,18 @@ export function enlazarPatchCompleto(itIdx){
   var nd=it.nid&&S.byId[it.nid];
   if(!nd){ try{ nd=ppMakeNode(it); }catch(e){ return; } }
   var t2=ppTotalOf(it), cap=Math.min(t2.tot, parseInt(sw.puertos)||capFor(sw.id));
-  S.doc.edges=S.doc.edges.filter(function(e){ return !(e.s===nd.id||e.t===nd.id); });
+  // el switch va en la parte trasera de cada puerto; la frontal (equipo) se respeta
+  it.links=it.links||{};
   for(var q=1;q<=cap;q++){
-    var hs=hostOf(nd.id,sw.id);
-    S.doc.edges.push({s:nd.id,t:sw.id,h:hs.id,port:q,pA:q,pB:q});
+    var lk=it.links[q]||{a:null,b:null};
+    lk.b={devId:sw.id,port:q};
+    it.links[q]=lk;
   }
+  Object.keys(it.links).forEach(function(p){
+    var l=it.links[p]; if(!l)return;
+    if(+p>cap)l.b=null;
+    if(!l.a&&!l.b) delete it.links[p];
+  });
+  ppApplyLinks(it);
   save(); renderArmarios(); render(); renderList();
 }

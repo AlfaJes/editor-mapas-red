@@ -83,12 +83,14 @@ export function dedupePorts(){
     for(var p=1;p<=cap+40;p++){ if(!seen[id+':'+p]) return p; }
     return cap+41;
   }
+  // en un patch panel cada puerto puede tener dos cables (frontal y trasero)
+  function esPatch(id){ var n=S.byId[id]; return !!(n&&n.tipo==='patch'); }
   S.doc.edges.forEach(function(e){
     var k1=e.s+':'+e.pA;
-    if(seen[k1]){ e.pA=pick(e.s); k1=e.s+':'+e.pA; }
+    if(seen[k1]&&!esPatch(e.s)){ e.pA=pick(e.s); k1=e.s+':'+e.pA; }
     seen[k1]=1;
     var k2=e.t+':'+e.pB;
-    if(seen[k2]){ e.pB=pick(e.t); k2=e.t+':'+e.pB; }
+    if(seen[k2]&&!esPatch(e.t)){ e.pB=pick(e.t); k2=e.t+':'+e.pB; }
     seen[k2]=1;
   });
   S.doc.edges.forEach(syncRackPort);

@@ -79,6 +79,18 @@ export function createFromModal(){
     var _nb=ZBOX.find(b=>b.z===zona); if(_nb){n.nx=_nb.x+_nb.w/2;n.ny=_nb.y+_nb.h/2;}
     save();
   }
+  // un patch creado desde el mapa tambien aparece en el armario
+  if(tipo==='patch'){
+    if(!Array.isArray(S.doc.racks))S.doc.racks=[];
+    if(!S.doc.racks.length)S.doc.racks.push({id:'rk'+Date.now().toString(36),n:'Armario 1',u:42,items:[]});
+    var _rk=(S.doc.racks.filter(function(x){return x.id===state.rackId;})[0])||S.doc.racks[0];
+    var _occ={};
+    (_rk.items||[]).forEach(function(it){var h=Math.max(1,parseInt(it.u)||1),u0=parseInt(it.u0)||1;for(var k=0;k<h;k++)_occ[u0+k]=1;});
+    var _u0=0;
+    for(var _u=_rk.u||42;_u>=1;_u--){ if(!_occ[_u]){ _u0=_u; break; } }
+    if(_u0)_rk.items.push({k:'pp',n:n.nombre,u0:_u0,u:1,ppr:24,pt:Math.max(2,parseInt(n.puertos)||24),links:{},nid:n.id});
+    save();
+  }
   rebuildUI(); state.sel=n.id; state.esel=null;
   if(!state.edit){state.edit=true;syncEdit();}
   closeModal(); render(); renderList(); showDetail(); centerOn(S.byId[n.id]);

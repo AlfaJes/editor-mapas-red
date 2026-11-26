@@ -174,8 +174,14 @@
   <h3 id="lnk_t">Puerto</h3>
   <div class="hintbox" id="lnk_sub">Elige qué hay conectado en este puerto.</div>
   <div style="display:grid;grid-template-columns:1fr 96px;gap:8px;margin-top:10px">
-    <div><label style="font-size:10px;color:#7d93b3">Equipo</label><select id="lnk_dev" style="width:100%"></select></div>
+    <div><label style="font-size:10px;color:#7d93b3" id="lnk_l1">Equipo</label><select id="lnk_dev" style="width:100%"></select></div>
     <div><label style="font-size:10px;color:#7d93b3">Puerto</label><select id="lnk_port" style="width:100%"></select></div>
+  </div>
+  <div id="lnk_side2" style="display:none;margin-top:10px;border-top:1px solid #1f2f47;padding-top:10px">
+    <div style="display:grid;grid-template-columns:1fr 96px;gap:8px">
+      <div><label style="font-size:10px;color:#7d93b3" id="lnk_l2">Del patch al switch / router</label><select id="lnk_dev2" style="width:100%"></select></div>
+      <div><label style="font-size:10px;color:#7d93b3">Puerto</label><select id="lnk_port2" style="width:100%"></select></div>
+    </div>
   </div>
   <div class="macts" style="margin-top:12px">
     <button class="btn danger" id="lnk_del">Quitar enlace</button>

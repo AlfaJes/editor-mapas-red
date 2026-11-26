@@ -38,6 +38,31 @@ export function lnkOcupados(id) {
   });
   return m;
 }
+// rellena un <select> de equipos (excluyendo el propio equipo si se indica)
+export function fillDev(selId, selected, exceptId) {
+  var sel = document.getElementById(selId); if (!sel) return;
+  var cands = S.nodes.filter(function (n) { return lnkPortsOf(n.id) > 0 && n.id !== exceptId; });
+  cands.sort(function (a, b) { return a.nombre.localeCompare(b.nombre, 'es'); });
+  sel.innerHTML = '<option value="">— nada —</option>' + cands.map(function (n) {
+    return '<option value="' + n.id + '"' + (n.id === selected ? ' selected' : '') + '>' + escAttr(n.nombre) + '</option>';
+  }).join('');
+}
+// rellena un <select> de puertos; exemptFn(p) dice qué puertos no cuentan como ocupados
+export function fillPort(selId, devId, want, exemptFn) {
+  var sel = document.getElementById(selId); if (!sel) return;
+  if (!devId) { sel.innerHTML = ''; return; }
+  var cap = lnkPortsOf(devId), ocu = lnkOcupados(devId), ops = '', libres = 0, ok = false;
+  for (var p = 1; p <= cap; p++) {
+    var ocupado = !!ocu[p] && !(exemptFn && exemptFn(p));
+    if (!ocupado) libres++;
+    ops += '<option value="' + p + '"' + (ocupado ? ' disabled' : '') + (p === want ? ' selected' : '') + '>P' + p + (ocupado ? ' · ocupado' : '') + '</option>';
+    if (p === want) ok = true;
+  }
+  sel.innerHTML = ops || '<option value="1">P1</option>';
+  if (!ok && libres) {
+    for (var q = 0; q < sel.options.length; q++) { if (!sel.options[q].disabled) { sel.value = sel.options[q].value; break; } }
+  }
+}
 export function lnkFillDevs(selected) {
   var sel = document.getElementById('lnk_dev');
   var cands = S.nodes.filter(function (n) { return lnkPortsOf(n.id) > 0; });
@@ -83,17 +108,80 @@ export function lnkFillPorts(want) {
     }
   }
 }
+// ---------- patch panel: cada puerto tiene DOS lados (equipo frontal <-> switch trasero) ----------
+function ppLink(it, p) {
+  var lk = (it.links || {})[p];
+  if (!lk) return { a: null, b: null };
+  if (lk.a || lk.b) return { a: lk.a || null, b: lk.b || null };
+  return { a: lk.devId ? { devId: lk.devId, port: lk.port } : null, b: null };
+}
+function ppFillSide(sfx, keep) {
+  var lk = ppLink(lnkRack() ? lnkRack().items[S.LN.idx] : null, S.LN.port);
+  var cur = sfx === '2' ? lk.b : lk.a;
+  var selDev = document.getElementById('lnk_dev' + sfx);
+  var devId = keep ? (selDev ? selDev.value : '') : (cur ? cur.devId : '');
+  fillDev('lnk_dev' + sfx, devId, null);
+  var want = keep ? 0 : (cur ? cur.port : 0);
+  fillPort('lnk_port' + sfx, document.getElementById('lnk_dev' + sfx).value, want, function (p) {
+    return !keep && cur && p === cur.port;
+  });
+}
+// convierte it.links en cables de verdad del nodo del patch
+export function ppApplyLinks(it) {
+  if (!it || !it.nid || !S.byId[it.nid]) return;
+  var nid = it.nid;
+  S.doc.edges = S.doc.edges.filter(function (e) { return e.s !== nid && e.t !== nid; });
+  Object.keys(it.links || {}).forEach(function (p) {
+    var lk = ppLink(it, p);
+    ['a', 'b'].forEach(function (side) {
+      var x = lk[side]; if (!x || !x.devId || !S.byId[x.devId]) return;
+      var pt = parseInt(p, 10) || 0, dp = parseInt(x.port, 10) || 0;
+      if (!pt || !dp) return;
+      var hs = hostOf(nid, x.devId);
+      var e = { s: nid, t: x.devId, h: hs.id, port: 0, pA: pt, pB: dp, pside: side };
+      try { syncRackPort(e); } catch (_) {}
+      S.doc.edges.push(e);
+    });
+  });
+}
+// lee los cables existentes del patch y rellena it.links (a/b)
+export function ppBuildLinks(it) {
+  if (!it || !it.nid) return;
+  var nid = it.nid;
+  it.links = it.links || {};
+  S.doc.edges.forEach(function (e) {
+    if (e.s === nid && e.t !== nid) {
+      var p = e.pA, side = e.pside || null;
+      var cur = ppLink(it, p);
+      if (!side) side = cur.a ? (cur.b ? null : 'b') : 'a';
+      if (!side) return;
+      if (!cur[side]) { it.links[p] = { a: cur.a, b: cur.b }; it.links[p][side] = { devId: e.t, port: e.pB }; }
+    } else if (e.t === nid && e.s !== nid) {
+      var p2 = e.pB, side2 = e.pside || null;
+      var cur2 = ppLink(it, p2);
+      if (!side2) side2 = cur2.a ? (cur2.b ? null : 'b') : 'a';
+      if (!side2) return;
+      if (!cur2[side2]) { it.links[p2] = { a: cur2.a, b: cur2.b }; it.links[p2][side2] = { devId: e.s, port: e.pA }; }
+    }
+  });
+}
 export function lnkOpenPatch(idx, port) {
   var r = lnkRack(); if (!r) return;
   var it = r.items[idx]; if (!it || it.k !== 'pp') return;
   S.LN = { kind: 'patch', idx: idx, port: port, nodeId: null, rackId: r.id };
-  var lk = (it.links || {})[port] || null;
-  document.getElementById('lnk_t').textContent = 'Puerto ' + port + ' del patch panel';
-  document.getElementById('lnk_sub').textContent = lk
-    ? ('Ahora va a ' + lk.dev + ' P' + lk.port + '. Puedes cambiarlo o quitarlo.')
-    : 'Elige a qué equipo y puerto llega este latiguillo.';
-  lnkFillDevs(lk ? lk.devId : '');
-  if (lk) lnkFillPorts(lk.port);
+  var lk = ppLink(it, port);
+  document.getElementById('lnk_t').textContent = (it.n || 'Patch') + ' · puerto ' + port;
+  var txt = [];
+  if (lk.a) txt.push('frontal: ' + ((S.byId[lk.a.devId] || {}).nombre || '?') + ' P' + lk.a.port);
+  if (lk.b) txt.push('trasero: ' + ((S.byId[lk.b.devId] || {}).nombre || '?') + ' P' + lk.b.port);
+  document.getElementById('lnk_sub').textContent = txt.length
+    ? ('Ahora tiene ' + txt.join(' y ') + '.')
+    : 'Un lado va al equipo (delante) y el otro al switch o router (detrás).';
+  document.getElementById('lnk_l1').textContent = 'Equipo (parte frontal)';
+  document.getElementById('lnk_l2').textContent = 'Del patch al switch / router (parte trasera)';
+  document.getElementById('lnk_side2').style.display = 'block';
+  ppFillSide('', false);
+  ppFillSide('2', false);
   document.getElementById('lnkm').classList.add('on');
 }
 export function lnkOpenDev(nodeId, port) {
@@ -110,18 +198,41 @@ export function lnkOpenDev(nodeId, port) {
     : 'Elige a qué equipo y puerto se conecta.';
   lnkFillDevs(other ? other.id : '');
   if (other) lnkFillPorts(ed.s === nodeId ? ed.pB : ed.pA);
+  var s2 = document.getElementById('lnk_side2');
+  if (s2) s2.style.display = 'none';
+  var l1 = document.getElementById('lnk_l1'); if (l1) l1.textContent = 'Equipo';
   document.getElementById('lnkm').classList.add('on');
 }
 export function lnkClose() { document.getElementById('lnkm').classList.remove('on'); }
 
+// lee un lado del modal: {devId,port} o null
+function readSide(sfx) {
+  var dv = document.getElementById('lnk_dev' + sfx), pt = document.getElementById('lnk_port' + sfx);
+  var id = dv ? dv.value : '';
+  var p = pt ? (parseInt(pt.value, 10) || 0) : 0;
+  if (!id || !p) return null;
+  return { devId: id, port: p };
+}
+
 export function lnkSave() {
+  // ---- patch: dos lados (frontal + trasero) ----
+  if (S.LN.kind === 'patch') {
+    var rk = lnkRack(), itp = rk && rk.items[S.LN.idx];
+    if (!itp) return;
+    var A = readSide(''), B = readSide('2');
+    if (A && B && A.devId === B.devId && A.port === B.port) { alert('El mismo equipo y puerto en los dos lados.'); return; }
+    itp.links = itp.links || {};
+    if (!A && !B) delete itp.links[S.LN.port];
+    else itp.links[S.LN.port] = { a: A, b: B };
+    ppApplyLinks(itp);
+    save(); rebuild(); render(); renderList(); renderArmarios(); showDetail(); lnkClose();
+    return;
+  }
   var dev = document.getElementById('lnk_dev').value;
   var port = parseInt(document.getElementById('lnk_port').value, 10) || 0;
   if (!dev) {
     // sin equipo destino: si el puerto tenía enlace, se quita
-    var tenia = S.LN.kind === 'patch'
-      ? !!(lnkRack() && lnkRack().items[S.LN.idx] && (lnkRack().items[S.LN.idx].links || {})[S.LN.port])
-      : S.doc.edges.some(function (e) {
+    var tenia = S.doc.edges.some(function (e) {
           return (e.s === S.LN.nodeId && e.pA === S.LN.port) || (e.t === S.LN.nodeId && e.pB === S.LN.port);
         });
     if (tenia) lnkDelete(); else lnkClose();
@@ -131,13 +242,7 @@ export function lnkSave() {
   var _o = document.getElementById('lnk_port').options[document.getElementById('lnk_port').selectedIndex];
   if (_o && _o.disabled) { alert('Ese puerto ya está ocupado. Elige otro.'); return; }
   var d = S.byId[dev]; if (!d) return;
-  if (S.LN.kind === 'patch') {
-    var r = lnkRack(); var it = r && r.items[S.LN.idx];
-    if (!it) return;
-    it.links = it.links || {};
-    it.links[S.LN.port] = { devId: dev, dev: d.nombre, port: port };
-    save(); renderArmarios(); lnkClose();
-  } else {
+  {
     var a = S.LN.nodeId, b = dev;
     if (a === b) { alert('No se puede conectar consigo mismo.'); return; }
     // liberar los puertos implicados
@@ -154,7 +259,11 @@ export function lnkSave() {
 export function lnkDelete() {
   if (S.LN.kind === 'patch') {
     var r = lnkRack(); var it = r && r.items[S.LN.idx];
-    if (it && it.links) { delete it.links[S.LN.port]; save(); renderArmarios(); }
+    if (it && it.links) {
+      delete it.links[S.LN.port];
+      ppApplyLinks(it);
+      save(); rebuild(); render(); renderList(); renderArmarios(); showDetail();
+    }
   } else {
     S.doc.edges = S.doc.edges.filter(function (e) {
       return !((e.s === S.LN.nodeId && e.pA === S.LN.port) || (e.t === S.LN.nodeId && e.pB === S.LN.port));
@@ -169,7 +278,12 @@ export function lnkDelete() {
   var ok = document.getElementById('lnk_ok'); if (ok) ok.onclick = lnkSave;
   var del = document.getElementById('lnk_del'); if (del) del.onclick = lnkDelete;
   var can = document.getElementById('lnk_cancel'); if (can) can.onclick = lnkClose;
-  var dv = document.getElementById('lnk_dev'); if (dv) dv.onchange = function(){ lnkFillPorts(); };
+  var dv = document.getElementById('lnk_dev');
+  if (dv) dv.onchange = function(){
+    if (S.LN.kind === 'patch') { ppFillSide('', true); } else { lnkFillPorts(); }
+  };
+  var dv2 = document.getElementById('lnk_dev2');
+  if (dv2) dv2.onchange = function(){ ppFillSide('2', true); };
 })();
 // clic en los puertos (delegado: sobrevive a los repintados)
 document.addEventListener('click', function(ev){
@@ -178,8 +292,7 @@ document.addEventListener('click', function(ev){
   var pp=t.closest('.armport');
   if(pp){ ev.stopPropagation(); ev.stopImmediatePropagation();
     var ipp=+pp.getAttribute('data-pp'), ppp=+pp.getAttribute('data-p');
-    var rr=lnkRack(), itp=rr&&rr.items[ipp];
-    if(itp&&itp.nid&&S.byId[itp.nid]){ lnkOpenDev(itp.nid, ppp); } else { lnkOpenPatch(ipp, ppp); }
+    lnkOpenPatch(ipp, ppp);
     return; }
   var dp=t.closest('.devport');
   if(dp){ ev.stopPropagation(); ev.stopImmediatePropagation(); lnkOpenDev(dp.getAttribute('data-dp'), +dp.getAttribute('data-p')); return; }
@@ -225,6 +338,7 @@ export function ppSave() {
   var nd=it.nid&&S.byId[it.nid];
   if(!nd){ try{ nd=ppMakeNode(it); }catch(e){} }
   if(nd){ nd.nombre=it.n; nd.puertos=v.tot; }
+  try{ ppApplyLinks(it); }catch(e){}
   save(); renderArmarios(); render(); renderList();
   document.getElementById('ppm').classList.remove('on');
 }
@@ -392,7 +506,7 @@ export function ppMakeNode(it){
   S.doc.nodes.push(nd); it.nid=id; rebuild();
   return nd;
 }
-// crea los nodos que falten y convierte los enlaces viejos (it.links) en cables de verdad
+// crea los nodos que falten y mantiene los cables del patch en sintonia con it.links
 export function ppMigrate(){
   var changed=false;
   (S.doc.racks||[]).forEach(function(r){
@@ -402,18 +516,9 @@ export function ppMigrate(){
       var nd=(it.nid&&S.byId[it.nid]);
       if(!nd){ ppMakeNode(it); nd=S.byId[it.nid]; changed=true; }
       if((parseInt(nd.puertos)||0)!==t.tot){ nd.puertos=t.tot; changed=true; }
-      if(it.links&&Object.keys(it.links).length){
-        Object.keys(it.links).forEach(function(p){
-          var lk=it.links[p]; if(!lk||!lk.devId||!S.byId[lk.devId])return;
-          var ex=S.doc.edges.filter(function(e){
-            return (e.s===it.nid&&e.pA===+p)||(e.t===it.nid&&e.pB===+p);})[0];
-          if(!ex){
-            var hs=hostOf(it.nid,lk.devId);
-            S.doc.edges.push({s:it.nid,t:lk.devId,h:hs.id,port:+p,pA:+p,pB:Math.max(1,parseInt(lk.port)||1)});
-          }
-        });
-        it.links={}; changed=true;
-      }
+      // los cables que ya existen mandan: se vuelcan en it.links (a/b)
+      ppBuildLinks(it);
+      ppApplyLinks(it);
     });
   });
   if(changed){ rebuild(); }
