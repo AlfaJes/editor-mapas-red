@@ -58,7 +58,12 @@ export function lnkFillPorts(want) {
   // enlace actual: su puerto en el equipo de destino no cuenta como ocupado,
   // para poder conservarlo o moverlo a otro puerto
   var curT = 0, curPartner = null;
-  if (S.LN.kind !== 'patch') {
+  if (S.LN.kind === 'patch') {
+    // el enlace actual del puerto del patch (patch -> equipo/puerto)
+    var rp = lnkRack(), itp = rp && rp.items[S.LN.idx];
+    var lk = itp && itp.links && itp.links[S.LN.port];
+    if (lk) { curPartner = lk.devId; curT = parseInt(lk.port, 10) || 0; }
+  } else {
     var ed = S.doc.edges.filter(function (e) {
       return (e.s === S.LN.nodeId && e.pA === cur) || (e.t === S.LN.nodeId && e.pB === cur);
     })[0];
