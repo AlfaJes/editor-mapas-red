@@ -176,7 +176,6 @@ function renderArmarios(){
       var nk0=(it.kids||[]).length;
       var hdr='';
       if(hh>=44){
-        hdr+='<rect x="'+(X0+1)+'" y="'+y+'" width="'+(W-2)+'" height="14" fill="#0f1b2e" opacity=".92" pointer-events="none"/>';
         hdr+='<text x="'+(X0+10)+'" y="'+(y+11)+'" class="cabn" style="font-size:11px">'+escAttr(it.n||ac.n)+'</text>';
       }
       // controles en el margen derecho, fuera de la bandeja
@@ -221,7 +220,6 @@ function renderArmarios(){
         if(!kids.length){
           s+='<text x="'+(X0+W/2)+'" y="'+(y+hh/2+2)+'" class="cabi" text-anchor="middle">bandeja vacia — pulsa "＋ equipo"</text>';
         }
-        if((it.kids||[]).length<=2) s+='<rect x="'+(X0+1)+'" y="'+y+'" width="'+(W-2)+'" height="14" fill="#0f1b2e" opacity=".92" pointer-events="none"/>';
         s+=hdr;
         s+=plus;
       } else {
