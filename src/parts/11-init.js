@@ -1,5 +1,5 @@
 // ---------- init ----------
-loadDoc(); if(!restoreLayout())layout(); rebuildUI(); syncEdit(); applyTitle(); bindTitle(); fit(); render(); renderList(); showDetail();
+loadDoc(); if(!restoreLayout())layout(); try{ ppMigrate(); }catch(e){ console.warn(e); } rebuildUI(); syncEdit(); applyTitle(); bindTitle(); fit(); render(); renderList(); showDetail();
 document.getElementById('bEdge').textContent='Trazado: '+(doc.estyle==='orto'?'ortogonal':(doc.estyle||'curvo'));
 setBtn('bGrid',!!state.grid);
 try{ if(localStorage.getItem('nm_rackonly')==='0')state.rackOnly=false; }catch(e){}

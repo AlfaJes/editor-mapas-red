@@ -144,7 +144,11 @@ document.addEventListener('click', function(ev){
   var t=ev.target;
   if(!t||!t.closest) return;
   var pp=t.closest('.armport');
-  if(pp){ ev.stopPropagation(); ev.stopImmediatePropagation(); lnkOpenPatch(+pp.getAttribute('data-pp'), +pp.getAttribute('data-p')); return; }
+  if(pp){ ev.stopPropagation(); ev.stopImmediatePropagation();
+    var ipp=+pp.getAttribute('data-pp'), ppp=+pp.getAttribute('data-p');
+    var rr=lnkRack(), itp=rr&&rr.items[ipp];
+    if(itp&&itp.nid&&byId[itp.nid]){ lnkOpenDev(itp.nid, ppp); } else { lnkOpenPatch(ipp, ppp); }
+    return; }
   var dp=t.closest('.devport');
   if(dp){ ev.stopPropagation(); ev.stopImmediatePropagation(); lnkOpenDev(dp.getAttribute('data-dp'), +dp.getAttribute('data-p')); return; }
 });
@@ -185,12 +189,19 @@ function ppSave() {
     for (var d = 1; d <= 8 && !ok; d++) { it.u0 = (it.u0 || 1) + d; ok = !colision(r, it); if (!ok) it.u0 -= d; }
     if (!ok) { it.u = viejo; alert('No cabe: el armario no tiene hueco para ' + v.u + 'U seguidas.'); return; }
   }
-  save(); renderArmarios(); document.getElementById('ppm').classList.remove('on');
+  // sincronizar el nodo del mapa (nombre y numero de puertos)
+  var nd=it.nid&&byId[it.nid];
+  if(!nd){ try{ nd=ppMakeNode(it); }catch(e){} }
+  if(nd){ nd.nombre=it.n; nd.puertos=v.tot; }
+  save(); renderArmarios(); render(); renderList();
+  document.getElementById('ppm').classList.remove('on');
 }
 function ppDel() {
   var r = lnkRack(); var it = r && r.items[PPX.idx]; if (!it) return;
+  try{ ppDropNode(it); }catch(e){}
   r.items.splice(PPX.idx, 1);
-  save(); renderArmarios(); document.getElementById('ppm').classList.remove('on');
+  save(); renderArmarios(); render(); renderList();
+  document.getElementById('ppm').classList.remove('on');
 }
 (function(){
   var o = document.getElementById('ppm_ok'); if (o) o.onclick = ppSave;
@@ -321,3 +332,64 @@ function traySave() {
     document.addEventListener('mouseup', up, true);
   }, true);
 })();
+
+// ---------- patch panel como equipo real del mapa ----------
+function ppTotalOf(it){
+  var per=Math.max(6,Math.min(48,parseInt(it.ppr)||24));
+  var tot=Math.max(per,Math.min(per*8,parseInt(it.pt)||(per*(parseInt(it.u)||1))));
+  return {per:per,tot:tot,filas:Math.max(1,Math.ceil(tot/per))};
+}
+function ppSpot(){
+  for(var yy=110;yy<1000;yy+=95){
+    for(var xx=110;xx<1600;xx+=150){
+      var ok=true;
+      for(var i=0;i<nodes.length;i++){var n=nodes[i];
+        if(Math.abs((n.x||0)-xx)<130&&Math.abs((n.y||0)-yy)<78){ok=false;break;}}
+      if(ok)return {x:xx,y:yy};
+    }
+  }
+  return {x:200,y:200};
+}
+function ppMakeNode(it){
+  var t=ppTotalOf(it);
+  var p=ppSpot();
+  var id='pp'+Date.now().toString(36)+Math.random().toString(36).slice(2,5);
+  var nd={id:id,nombre:(it.n||'Patch panel'),tipo:'patch',puertos:t.tot,
+    x:p.x,y:p.y,nx:p.x,ny:p.y,zona:(doc.zonasExtra&&doc.zonasExtra[0])||'',
+    ip:[],mac:'',modelo:'',so:'',u:1,perifs:[],roles:[],protocolos:[]};
+  doc.nodes.push(nd); it.nid=id; rebuild();
+  return nd;
+}
+// crea los nodos que falten y convierte los enlaces viejos (it.links) en cables de verdad
+function ppMigrate(){
+  var changed=false;
+  (doc.racks||[]).forEach(function(r){
+    (r.items||[]).forEach(function(it){
+      if(it.k!=='pp')return;
+      var t=ppTotalOf(it);
+      var nd=(it.nid&&byId[it.nid]);
+      if(!nd){ ppMakeNode(it); nd=byId[it.nid]; changed=true; }
+      if((parseInt(nd.puertos)||0)!==t.tot){ nd.puertos=t.tot; changed=true; }
+      if(it.links&&Object.keys(it.links).length){
+        Object.keys(it.links).forEach(function(p){
+          var lk=it.links[p]; if(!lk||!lk.devId||!byId[lk.devId])return;
+          var ex=doc.edges.filter(function(e){
+            return (e.s===it.nid&&e.pA===+p)||(e.t===it.nid&&e.pB===+p);})[0];
+          if(!ex){
+            var hs=hostOf(it.nid,lk.devId);
+            doc.edges.push({s:it.nid,t:lk.devId,h:hs.id,port:+p,pA:+p,pB:Math.max(1,parseInt(lk.port)||1)});
+          }
+        });
+        it.links={}; changed=true;
+      }
+    });
+  });
+  if(changed){ rebuild(); }
+  return changed;
+}
+function ppDropNode(it){
+  if(!it||!it.nid)return;
+  doc.nodes=doc.nodes.filter(function(n){return n.id!==it.nid;});
+  doc.edges=doc.edges.filter(function(e){return e.s!==it.nid&&e.t!==it.nid;});
+  it.nid=null; rebuild();
+}

@@ -47,6 +47,7 @@ function portSel(e,side){
 }
 function capFor(id){
   var n=byId[id]; if(!n)return 8;
+  if(n.tipo==='patch') return Math.max(2,parseInt(n.puertos)||24);
   var c=Math.max(parseInt(n.puertos)||0,(n.ports&&n.ports.length)||0);
   doc.edges.forEach(function(e){ if(e.s===id&&e.pA>c)c=e.pA; if(e.t===id&&e.pB>c)c=e.pB; });
   var base=(n.tipo==='switch'||n.tipo==='router'||n.tipo==='firewall')?8:2;

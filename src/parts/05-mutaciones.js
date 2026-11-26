@@ -25,7 +25,7 @@ function saveEdit(id){
 }
 function openModal(zona){
   const tsel=document.getElementById('m_tipo');
-  tsel.innerHTML=Object.keys(TYPE).map(k=>`<option value="${k}">${TYPE[k][1]}</option>`).join('');
+  tsel.innerHTML=Object.keys(TYPE).filter(k=>k!=='patch').map(k=>`<option value="${k}">${TYPE[k][1]}</option>`).join('');
   var _sel=document.getElementById('m_zona');
   var _zz=zonas.slice().sort(function(a,b){return a.localeCompare(b,'es');});
   _sel.innerHTML=_zz.map(function(z){return '<option value="'+escAttr(z)+'">'+escAttr(z)+'</option>';}).join('')+'<option value="Sin zona">\u2014 Sin zona \u2014</option><option value="__nueva__">\u002b Crear zona nueva\u2026</option>';

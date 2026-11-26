@@ -123,6 +123,7 @@ function portStrip(px1,px2,y,h,id){
 }
 
 function renderArmarios(){
+  if(typeof ppMigrate==='function'){ try{ ppMigrate(); }catch(e){} }
   var wrap=document.getElementById('rack');
   if(!wrap)return;
   armariosInit();
@@ -263,13 +264,15 @@ function renderArmarios(){
         if(c===0){
           s+='<rect x="'+ox+'" y="'+(ry+sockH+1).toFixed(1)+'" width="'+blockW+'" height="'+stripH+'" rx="1" fill="#c9d4e2" opacity=".92"/>';
         }
-        var lk=(it.links&&it.links[p])||null;
-        var lcol=lk?(linkColor(lk)||'#4f8cff'):'';
+        var pnid=it.nid;
+        var ee=pnid?doc.edges.filter(function(e){return (e.s===pnid&&e.pA===p)||(e.t===pnid&&e.pB===p);})[0]:null;
+        var oth=ee?(byId[ee.s===pnid?ee.t:ee.s]||{}):null;
+        var lcol=ee?(cabColor(ee)||'#4f8cff'):'';
         var bx2=ox+c*pw+(c>=Math.ceil(per/2)?huecoG:0);
         var w2=Math.max(4,pw-2.6);
-        s+='<rect class="armport'+(lk?' on':'')+'" data-pp="'+idx+'" data-p="'+p+'" x="'+(bx2+1.2).toFixed(1)+'" y="'+ry.toFixed(1)+'" width="'+w2.toFixed(1)+'" height="'+sockH.toFixed(1)+'" rx="1.6"'+
-           (lk?' style="fill:'+lcol+';fill-opacity:.9;stroke:'+lcol+'"':'')+
-           '><title>Puerto '+p+(lk?(' → '+lk.dev+' P'+lk.port):' (libre)')+'</title></rect>';
+        s+='<rect class="armport'+(ee?' on':'')+'" data-pp="'+idx+'" data-p="'+p+'" x="'+(bx2+1.2).toFixed(1)+'" y="'+ry.toFixed(1)+'" width="'+w2.toFixed(1)+'" height="'+sockH.toFixed(1)+'" rx="1.6"'+
+           (ee?' style="fill:'+lcol+';fill-opacity:.9;stroke:'+lcol+'"':'')+
+           '><title>Puerto '+p+(ee?(' → '+(oth.nombre||'?')+' P'+(ee.s===pnid?ee.pB:ee.pA)):' (libre)')+'</title></rect>';
         s+='<text x="'+(bx2+pw/2-1.2).toFixed(1)+'" y="'+(ry+sockH+stripH-1.4).toFixed(1)+'" class="cabpn2" text-anchor="middle">'+p+'</text>';
       }
       s+='</g>';
@@ -365,8 +368,10 @@ function bindArmarios(){
     var occ=rackOcupados(r,null), u0=0;
     for(var u=r.u;u>=1;u--){ if(!occ[u]){ u0=u; break; } }
     if(!u0){ alert('No quedan huecos libres.'); return; }
-    r.items.push({k:'pp',n:'Patch '+(r.items.filter(function(x){return x.k==='pp';}).length+1)+' (24)',u0:u0,u:1,ports:24,links:{}});
-    save(); renderArmarios();
+    var nvo={k:'pp',n:'Patch '+(r.items.filter(function(x){return x.k==='pp';}).length+1),u0:u0,u:1,ppr:24,pt:24,links:{}};
+    r.items.push(nvo);
+    try{ ppMakeNode(nvo); }catch(e){}
+    save(); renderArmarios(); render(); renderList();
   };
   RACK.querySelectorAll('[data-hu]').forEach(function(el){
     el.onclick=function(ev){
@@ -430,7 +435,9 @@ function bindArmarios(){
     x.addEventListener('click',function(ev){
       ev.stopPropagation();
       var i=+x.getAttribute('data-del');
-      r.items.splice(i,1); save(); renderArmarios();
+      var fuera=r.items[i];
+      if(fuera&&fuera.k==='pp'){ try{ ppDropNode(fuera); }catch(e){} }
+      r.items.splice(i,1); save(); renderArmarios(); render(); renderList();
     });
   });
 
@@ -480,12 +487,17 @@ function enlazarPatchCompleto(itIdx){
   var it=r.items[itIdx]; if(!it||it.k!=='pp')return;
   var sws=nodes.filter(function(n){return n.tipo==='switch';});
   if(!sws.length){ alert('No hay switches.'); return; }
-  var nombres=sws.map(function(s,i){return (i+1)+') '+s.nombre+' ('+(s.puertos||'?')+' puertos)';}).join('\n');
-  var resp=prompt('Enlazar todos los puertos con el switch nº:\n\n'+nombres,'1');
-  if(resp===null)return;
-  var sw=sws[parseInt(resp)-1]||sws[0];
-  it.links=it.links||{};
-  var cap=parseInt(sw.puertos)||24;
-  for(var p=1;p<=Math.min((it.ppr||24)*Math.max(1,it.u||1),cap);p++) it.links[p]={dev:sw.nombre,port:p,nid:sw.id};
-  save(); renderArmarios();
+  var nombres=sws.map(function(s,i2){return (i2+1)+') '+s.nombre+' ('+capFor(s.id)+' puertos)';}).join('\n');
+  var p2=prompt('Enlazar todos los puertos con el switch n\u00ba:\n\n'+nombres,'1');
+  if(p2===null)return;
+  var sw=sws[parseInt(p2)-1]||sws[0];
+  var nd=it.nid&&byId[it.nid];
+  if(!nd){ try{ nd=ppMakeNode(it); }catch(e){ return; } }
+  var t2=ppTotalOf(it), cap=Math.min(t2.tot, parseInt(sw.puertos)||capFor(sw.id));
+  doc.edges=doc.edges.filter(function(e){ return !(e.s===nd.id||e.t===nd.id); });
+  for(var q=1;q<=cap;q++){
+    var hs=hostOf(nd.id,sw.id);
+    doc.edges.push({s:nd.id,t:sw.id,h:hs.id,port:q,pA:q,pB:q});
+  }
+  save(); renderArmarios(); render(); renderList();
 }
