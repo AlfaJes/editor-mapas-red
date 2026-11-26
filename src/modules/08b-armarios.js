@@ -562,3 +562,47 @@ export function portTip(el){
   }
   return '';
 }
+
+// puertos del otro extremo de un puerto del armario (para marcarlos al pasar el raton)
+export function portPeers(el){
+  var out=[];
+  if(!el||!el.getAttribute)return out;
+  var p=+el.getAttribute('data-p')||0;
+  if(el.classList&&el.classList.contains('devport')){
+    var id=el.getAttribute('data-dp');
+    S.doc.edges.forEach(function(x){
+      if(x.s===id&&x.pA===p) out.push({nodeId:x.t,port:x.pB});
+      else if(x.t===id&&x.pB===p) out.push({nodeId:x.s,port:x.pA});
+    });
+  } else if(el.classList&&el.classList.contains('armport')){
+    var idx=+el.getAttribute('data-pp');
+    var sv=el.closest('.cabsvg'), rid=sv?sv.getAttribute('data-rid'):'';
+    var r=(S.doc.racks||[]).filter(function(x){return x.id===rid;})[0];
+    var it=r&&r.items[idx];
+    var lk=it&&(it.links||{})[p];
+    if(lk){ if(lk.a&&lk.a.devId)out.push({nodeId:lk.a.devId,port:lk.a.port}); if(lk.b&&lk.b.devId)out.push({nodeId:lk.b.devId,port:lk.b.port}); }
+  }
+  return out;
+}
+// pinta el puerto del otro extremo
+export function markPeers(el){
+  clearPeers();
+  if(!el)return;
+  portPeers(el).forEach(function(pe){
+    if(!pe||!pe.port)return;
+    var q=document.querySelector('.devport[data-dp="'+pe.nodeId+'"][data-p="'+pe.port+'"]');
+    if(q){ q.classList.add('portpeer'); return; }
+    // si el otro extremo es un patch, su puerto esta en el armario
+    (S.doc.racks||[]).forEach(function(r){
+      (r.items||[]).forEach(function(it,i){
+        if(it.k!=="pp"||it.nid!==pe.nodeId)return;
+        var w=document.querySelector('.armport[data-pp="'+i+'"][data-p="'+pe.port+'"]');
+        if(w)w.classList.add('portpeer');
+      });
+    });
+  });
+}
+export function clearPeers(){
+  var l=document.querySelectorAll('.portpeer');
+  for(var i=0;i<l.length;i++)l[i].classList.remove('portpeer');
+}

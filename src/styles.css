@@ -421,3 +421,9 @@ header{grid-column:1/-1;display:flex;flex-direction:column;gap:0;padding:0;align
 .devport{fill:#1e2f47;stroke:#3d5878;stroke-width:.9;cursor:pointer}
 .devport.on{fill:#255a94;stroke:#6ea8ff}
 .devport:hover{fill:#3b7fc4 !important;stroke:#a9d0ff !important}
+
+/* puerto del otro extremo, marcado al pasar el raton */
+.devport.portpeer, .armport.portpeer{
+  stroke:#ffd166 !important; stroke-width:1.8px !important;
+  filter:drop-shadow(0 0 3px #ffd166);
+}

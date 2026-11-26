@@ -8,7 +8,7 @@ import { showDetail } from './04c-ficha-formularios.js';
 import { delNode, undo } from './05-mutaciones.js';
 import { rebuildUI, setBtn } from './07-ui.js';
 import { snapArrowEnd, zoneAt } from './10e-flechas.js';
-import { portTip } from './08b-armarios.js';
+import { clearPeers, markPeers, portTip } from './08b-armarios.js';
 import { svg, t, tip } from './dom.js';
 // ---------- interacción ----------
 svg.addEventListener('wheel',e=>{e.preventDefault();
@@ -165,11 +165,12 @@ window.addEventListener('mousemove',e=>{
     S.drag._moved=true; render();}
   var _pt=e.target.closest?e.target.closest('.devport,.armport'):null;
   if(_pt){
+    markPeers(_pt);
     var _tt=portTip(_pt);
     if(_tt){ tip.innerHTML=_tt; tip.style.opacity=1;
       tip.style.left=Math.min(e.clientX+16,window.innerWidth-320)+'px';
       tip.style.top=(e.clientY+16)+'px'; return; }
-  }
+  } else clearPeers();
   const g=e.target.closest?e.target.closest('.node'):null;
   if(g&&S.byId[g.dataset.id]){const n=S.byId[g.dataset.id];
     tip.innerHTML=`<b>${n.nombre}</b><span>${(TYPE[n.tipo]||['','Equipo'])[1]} · ${n.zona}${n.ip.length?'<br>'+n.ip.join(' · '):''}</span>`;
