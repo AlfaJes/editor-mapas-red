@@ -125,6 +125,11 @@ function renderArmarios(){
 
   var occ=rackOcupados(r,null);
   r.items.forEach(function(it,idx){
+    if(it.k==='acc' && Array.isArray(it.kids) && it.kids.length){
+      var _s=0; it.kids.forEach(function(k){ _s+=Math.max(1,parseInt(k.h)||1); });
+      var _u2=1+_s;
+      if(parseInt(it.u)!==_u2) it.u=_u2;
+    }
     var h=Math.max(1,parseInt(it.u)||1);
     var pos=yDeU(it.u0||1,h,uTot,U);
     var y=pos.y, hh=h*U-2;
@@ -135,14 +140,15 @@ function renderArmarios(){
       s+='<rect x="'+X0+'" y="'+y+'" width="5" height="'+hh+'" rx="2" fill="'+(ac.col||'#64748b')+'"/>';
       s+='<text x="'+(X0+14)+'" y="'+(y+13)+'" class="cabn">'+escAttr(it.n||ac.n)+'</text>';
       s+='<text x="'+(X0+190)+'" y="'+(y+13)+'" class="cabs">accesorio</text>';
-      s+='<text class="armu" data-hu="'+idx+'" x="'+(X0+W-26)+'" text-anchor="end" y="'+(y+13)+'" title="Altura ('+(it.u||1)+'U). Clic para cambiarla.">'+(it.u||1)+'U</text>';
+      var esB=(it.acc==='bandeja'||it.acc==='bandeja2');
+      s+='<text class="armu"'+(esB?'':' data-hu="'+idx+'"')+' x="'+(X0+W-26)+'" text-anchor="end" y="'+(y+13)+'" title="'+(esB?('Ocupa '+(it.u||1)+'U: 1U de repisa + lo que suman los equipos'):'Altura ('+(it.u||1)+'U). Clic para cambiarla.')+'">'+(it.u||1)+'U</text>';
       s+='<text class="cabxx" data-del="'+idx+'" x="'+(X0+W-6)+'" y="'+(y+13)+'" text-anchor="end">✕</text>';
       if(it.acc==='bandeja'||it.acc==='bandeja2'){
         var _usada=0; (it.kids||[]).forEach(function(k){ _usada+=Math.max(1,parseInt(k.h)||1); });
         var _libre=Math.max(0,(it.u||1)-_usada);
         s+='<rect class="armplusbox" data-tray="'+idx+'" x="'+(X0+W-158)+'" y="'+(y+2)+'" width="100" height="15" rx="3" fill="#12301f" stroke="#3f7a58" opacity=".9"/>';
-        s+='<text class="armplus" data-tray="'+idx+'" x="'+(X0+W-62)+'" y="'+(y+13)+'" text-anchor="end" title="Anadir un equipo a esta bandeja">＋ equipo ('+_libre+'U)</text>';
-        var kids=it.kids||[], base=y+hh-6, cum=0;
+        s+='<text class="armplus" data-tray="'+idx+'" x="'+(X0+W-62)+'" y="'+(y+13)+'" text-anchor="end" title="Anadir un equipo a esta bandeja">＋ equipo</text>';
+        var kids=it.kids||[], base=y+hh-U, cum=0;
         kids.forEach(function(k,ki){
           var nd=byId[k.id]; if(!nd)return;
           var kh=Math.max(1,parseInt(k.h)||1)*U-2;
@@ -166,7 +172,9 @@ function renderArmarios(){
           s+='</g>';
           cum+=kh+1;
         });
-        s+='<rect x="'+(X0+6)+'" y="'+(y+hh-5)+'" width="'+(W-12)+'" height="4" rx="2" fill="#4a5b75"/>';
+        s+='<rect x="'+(X0+4)+'" y="'+(y+hh-U+3)+'" width="'+(W-8)+'" height="'+(U-6)+'" rx="2" fill="#1c2a3f" stroke="#4a5b75"/>';
+        s+='<rect x="'+(X0+4)+'" y="'+(y+hh-U+3)+'" width="'+(W-8)+'" height="3" rx="1.5" fill="#5d7594"/>';
+        s+='<text x="'+(X0+14)+'" y="'+(y+hh-U/2+4)+'" class="cabi">repisa</text>';
         if(!kids.length){
           s+='<text x="'+(X0+W/2)+'" y="'+(y+hh/2+2)+'" class="cabi" text-anchor="middle">bandeja vacia — pulsa "＋ equipo"</text>';
         }
