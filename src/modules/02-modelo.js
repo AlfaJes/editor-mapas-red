@@ -141,8 +141,9 @@ export function projTouch(){
 }
 export function normDoc(d){
   d.colors=d.colors||{}; d.estyle=d.estyle||'curvo'; d.zpos=d.zpos||[];
+  d.nodes=d.nodes||[]; d.edges=d.edges||[]; d.redes=d.redes||[]; d.racks=d.racks||[];
   d.zparent=d.zparent||{}; d.zonasExtra=d.zonasExtra||[]; d.notes=d.notes||[]; d.arrows=d.arrows||[];
-  d.title=d.title||DATA.titulo; d.sub=d.sub||DATA.sub; d.savedAt=d.savedAt||'';
+  d.title=d.title||DATA.titulo||'Mapa de red'; d.sub=d.sub||DATA.sub||''; d.savedAt=d.savedAt||'';
   return d;
 }
 export function loadDoc(){

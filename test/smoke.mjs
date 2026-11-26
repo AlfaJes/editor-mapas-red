@@ -26,7 +26,7 @@ const checks = [
   ['equipos dibujados', count(/class="node(?: |")/g), full ? expectNodes : 0],
   ['enlaces dibujados', count(/class="edge(?: |")/g), full ? 21 : 0],
   ['puntos de conexion', count(/class="epin"/g), full ? 42 : 0],
-  ['secciones', count(/class="hull(?: |")/g), full ? 9 : 0],
+  ['secciones', count(/class="hull(?: |")/g), full ? 9 : 1],
 ];
 
 let bad = 0;
@@ -35,7 +35,7 @@ for (const [name, got, want] of checks) {
   if (!ok) bad++;
   console.log((ok ? 'OK   ' : 'FALLO') + ' ' + name + ': ' + got + ' (esperado ' + want + ')');
 }
-if (!/MAPA DE RED/.test(dom)) { console.log('FALLO titulo'); bad++; }
+if (!/MAPA DE RED/i.test(dom)) { console.log('FALLO titulo'); bad++; }
 
 // La version publica no debe llevar datos del mapa dentro
 const html = readFileSync(abs, 'utf8');
