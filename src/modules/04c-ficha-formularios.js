@@ -32,7 +32,7 @@ export function readHTML(n){
    </dl>
    ${extraHTML(n)}
    ${(function(){
-      var L=n.nics||[];
+      var L=effNics(n);
       if(!L.length)return '';
       return '<h4 style="font-size:10.5px;letter-spacing:.1em;color:#7d93b3;margin:10px 0 5px">ADAPTADORES ('+L.length+')</h4>'+
         '<div class="niclist">'+L.map(function(x){
@@ -127,6 +127,19 @@ export function escAttr(v){return String(v==null?'':v).replace(/"/g,'&quot;');}
 export function perfList(v){
   const arr=Array.isArray(v)?v:(v?String(v).split(',').map(s=>s.trim()).filter(Boolean):[]);
   return arr.map(x=>typeof x==='string'?{t:x,marca:'',modelo:'',serie:''}:x);
+}
+// adaptadores efectivos: si el equipo tiene IPs y MAC pero no tiene adaptadores
+// dados de alta, se muestran esos datos como un adaptador (asi no se pierden de vista)
+export function effNics(n){
+  if(!n) return [];
+  if(Array.isArray(n.nics)&&n.nics.length) return n.nics;
+  var ips=Array.isArray(n.ip)?n.ip.filter(Boolean):(n.ip?String(n.ip).split(/[\n,;]+/).map(function(x){return x.trim();}).filter(Boolean):[]);
+  var mac=n.mac||'';
+  if(!ips.length&&!mac) return [];
+  if(!ips.length) return [{n:'',k:'física',m:'acceso',vlan:'',ip:'',mac:mac,host:''}];
+  return ips.map(function(x,i){
+    return {n:'',k:'física',m:'acceso',vlan:'',ip:x,mac:(i===0?mac:''),host:''};
+  });
 }
 export function perifRowHTML(p,opts){
   const t=(p&&p.t)||opts[0];
@@ -422,7 +435,7 @@ export function formHTML(n){
     </div>
     ${fieldsHTML('e',n.tipo,n)}
     <div class="fld"><label>Adaptadores de red (físicos y virtuales)</label>
-      <div class="nics" id="e_nics">${nicsHTML(n.nics)}</div>
+      <div class="nics" id="e_nics">${nicsHTML(effNics(n))}</div>
       <button type="button" class="btn mini" id="e_nicadd">＋ Añadir adaptador</button>
       <div class="iphelp">En una <b>máquina virtual</b>: adaptador virtual (bridge, host-only, NAT o VLAN) y en qué host está. En el <b>servidor anfitrión</b>: sus adaptadores físicos y qué VM los usan.</div>
     </div>

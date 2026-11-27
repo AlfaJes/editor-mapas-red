@@ -108,6 +108,17 @@ export function lnkFillPorts(want) {
     }
   }
 }
+
+// al cambiar de equipo un cable que solo tenia un codo (bx/by), el codo pasa a ser
+// un punto fijo del trazado: asi la linea ya dibujada se respeta y solo se rehace el ultimo tramo
+export function keepRoute(e) {
+  if (!e) return;
+  var st = S.doc.estyle || 'curvo';
+  if (st !== 'curvo') return;
+  if (Array.isArray(e.pts) && e.pts.length) return;
+  if (typeof e.bx === 'number' && typeof e.by === 'number') e.pts = [[e.bx, e.by]];
+}
+
 // ---------- patch panel: cada puerto tiene DOS lados (equipo trasero <-> switch delantero) ----------
 function ppLink(it, p) {
   var lk = (it.links || {})[p];
@@ -150,7 +161,7 @@ export function ppApplyLinks(it) {
       var e = { s: nid, t: x.devId, h: hs.id, port: 0, pA: pt, pB: dp, pside: side };
       var o = prev[pt + '|' + side + '|' + x.devId + '|' + dp];
       if (o) {
-        ['pts', 'color', 'cat', 'etq', 'net', 'vis', 'curve', 'dash', 'w'].forEach(function (k) {
+        ['pts', 'bx', 'by', 'color', 'cat', 'etq', 'net', 'vis', 'curve', 'dash', 'w'].forEach(function (k) {
           if (o[k] !== undefined) e[k] = (k === 'pts' && Array.isArray(o.pts)) ? o.pts.slice() : o[k];
         });
       }
@@ -264,6 +275,7 @@ export function lnkSave() {
     var old = S.doc.edges.filter(function (e) {
       return (e.s === a && e.pA === S.LN.port) || (e.t === a && e.pB === S.LN.port);
     })[0] || null;
+    if (old) keepRoute(old);
     // liberar el puerto del equipo destino (y el enlace viejo, que se reinserta mutado)
     S.doc.edges = S.doc.edges.filter(function (e) {
       if (e === old) return false;
@@ -275,7 +287,7 @@ export function lnkSave() {
       // se conservan puntos intermedios, color, categoría, etiqueta y red;
       // solo cambia el extremo que se está editando (el otro tramo se estira)
       e2 = { s: old.s, t: old.t, pA: old.pA, pB: old.pB };
-      ['pts', 'color', 'cat', 'etq', 'net', 'vis', 'curve', 'tip', 'dash', 'w'].forEach(function (k) {
+      ['pts', 'bx', 'by', 'color', 'cat', 'etq', 'net', 'vis', 'curve', 'tip', 'dash', 'w'].forEach(function (k) {
         if (old[k] !== undefined) e2[k] = (k === 'pts' ? old.pts.slice() : old[k]);
       });
       if (e2.s !== a) {                    // se orienta para que este puerto quede en 's'
@@ -631,6 +643,7 @@ export function egSave() {
   if (a === b) { alert('Los dos extremos no pueden ser el mismo equipo.'); return; }
   if (!pa || !pb) { alert('Elige los dos puertos.'); return; }
   var old = egEdgeOf(S.EG.s, S.EG.t);
+  if (old) keepRoute(old);
   snap();
   // liberar los puertos nuevos si los ocupaba otro enlace
   S.doc.edges = S.doc.edges.filter(function (e) {
