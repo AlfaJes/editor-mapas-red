@@ -394,11 +394,12 @@ header{grid-column:1/-1;display:flex;flex-direction:column;gap:0;padding:0;align
 .cabrow.sel rect:first-child{stroke:#4f8cff;stroke-width:2}
 .rkord{display:flex;gap:6px;margin-left:8px}
 .nics{display:flex;flex-direction:column;gap:5px;margin:5px 0}
-.nicrow{display:flex;flex-wrap:wrap;gap:4px;align-items:center;background:#0c1626;border:1px solid #24344f;border-radius:6px;padding:5px}
+.nicrow{display:flex;flex-wrap:wrap;gap:4px;align-items:center;background:#0c1626;border:1px solid #24344f;border-radius:6px;padding:5px 18px 5px 5px;position:relative}
 .nicrow input,.nicrow select{background:#0b1424;border:1px solid #26374f;color:#dbe9ff;border-radius:5px;font:inherit;font-size:10.5px;padding:3px 5px;min-width:0}
 .nicrow .nc-n{width:92px}.nicrow .nc-k{width:70px}.nicrow .nc-m{width:78px}
 .nicrow .nc-v{width:52px}.nicrow .nc-ip{width:118px}.nicrow .nc-dom{width:118px}.nicrow .nc-mac{width:112px}.nicrow .nc-h{width:96px}
-.nicrow .nc-del{margin-left:auto;background:none;border:none;color:#7d93b3;cursor:pointer;font-size:12px}
+.nicrow .nc-del{position:absolute;right:-9px;top:7px;margin:0;width:17px;height:17px;line-height:15px;background:#12203a;border:1px solid #2b3f5c;border-radius:50%;color:#8ba0bd;cursor:pointer;font-size:10px;text-align:center;padding:0}
+.nicrow .nc-del:hover{background:#3a1f2a;border-color:#7a3346;color:#ffb4c0}
 .nicrow .naddrs{flex:1 0 auto;width:100%;min-width:0;display:flex;flex-direction:column;gap:3px;margin-top:4px}
 .nicrow .naddr{display:flex;gap:4px;align-items:center;width:100%;min-width:0}
 .nicrow .naddr .na-ip{flex:1 1 0;min-width:0;width:0}
@@ -443,3 +444,4 @@ header{grid-column:1/-1;display:flex;flex-direction:column;gap:0;padding:0;align
 .edr i{display:block;font-style:normal;font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:#6b83a4;margin-bottom:2px}
 .edr b{color:#dbe9ff}
 .edr span{display:block}
+.edcon{font-size:10px;letter-spacing:.04em;color:#7d93b3;margin:2px 0 1px}

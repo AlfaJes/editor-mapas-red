@@ -539,7 +539,11 @@ export function edgeDataHTML(ed,A,B){
     L.push('<span>MAC: '+(macs.length?escAttr(macs.join(' · ')):'—')+'</span>');
     return L.join('<br>');
   }
-  return '<div class="edata">'+
+  var con='<div class="edcon">Conexión: P'+(ed.pA||0)+' \u21c4 P'+(ed.pB||0)+
+    (ed.net?' \u00b7 red '+escAttr(ed.net):'')+
+    (ed.cat?' \u00b7 '+escAttr(ed.cat):'')+
+    (ed.etq?' \u00b7 '+escAttr(ed.etq):'')+'</div>';
+  return '<div class="edata" id="edata">'+con+
     '<div class="edr"><i>Desde</i>'+ends(A,ed.pA)+'</div>'+
     '<div class="edr"><i>Hasta</i>'+ends(B,ed.pB)+'</div>'+
   '</div>';
@@ -564,7 +568,6 @@ export function showDetail(){
       app.classList.add('sel');
       d.innerHTML=`<div class="dtitle">Conexión</div>
         <div class="dtype">${A.nombre} — ${B.nombre}</div>
-        ${edgeDataHTML(ed0,A,B)}
         <dl class="kv">
                     <dt>Puerto en ${escAttr(A.nombre)}</dt><dd>${portSel(ed0,'s')}</dd>
           <dt>Puerto en ${escAttr(B.nombre)}</dt><dd>${portSel(ed0,'t')}</dd>
@@ -598,6 +601,7 @@ export function showDetail(){
           ${ed0.nt&&ed0.nt.t?`<button class="btn" id="e_ntrm">Quitar caja</button>`:''}
         </div>
         ${state.edit?`<button class="btn danger" id="e_del" style="margin-top:8px;width:100%">Eliminar enlace</button>`:''}
+        ${edgeDataHTML(ed0,A,B)}
         <div class="hint" style="margin-top:10px;font-size:11px;color:#7d93b3">
           Arrastra el punto azul del cable para moverlo a tu gusto.</div>`;
       ['s','t'].forEach(function(side){
