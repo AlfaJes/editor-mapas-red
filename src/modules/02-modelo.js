@@ -86,9 +86,11 @@ export function dedupePorts(){
   // en un patch panel cada puerto puede tener dos cables (trasero = equipo, delantero = switch)
   function esPatch(id){ var n=S.byId[id]; return !!(n&&n.tipo==='patch'); }
   S.doc.edges.forEach(function(e){
+    if(!e.pA){ e.pA=pick(e.s); }
     var k1=e.s+':'+e.pA;
     if(seen[k1]&&!esPatch(e.s)){ e.pA=pick(e.s); k1=e.s+':'+e.pA; }
     seen[k1]=1;
+    if(!e.pB){ e.pB=pick(e.t); }
     var k2=e.t+':'+e.pB;
     if(seen[k2]&&!esPatch(e.t)){ e.pB=pick(e.t); k2=e.t+':'+e.pB; }
     seen[k2]=1;
@@ -116,10 +118,11 @@ export function ensureEdges(){
   S.doc.edges.forEach(e=>{ if(!e.h||!S.byId[e.h])e.h=hostOf(e.s,e.t).id; e.port=parseInt(e.port)||0;
     if(typeof e.bx==='number'&&!Array.isArray(e.pts))e.pts=[[e.bx,e.by]]; });
   S.doc.edges.forEach(function(e){
-    if(typeof e.pA!=='number'||typeof e.pB!=='number'){
+    // sin puerto (o puerto 0) = hay que asignarle uno libre
+    if(typeof e.pA!=='number'||e.pA<1||typeof e.pB!=='number'||e.pB<1){
       var pt=parseInt(e.port)||0;
-      if(typeof e.pA!=='number') e.pA=(e.h===e.s&&pt)?pt:freePort(e.s,'s',e);
-      if(typeof e.pB!=='number') e.pB=(e.h===e.t&&pt)?pt:freePort(e.t,'t',e);
+      if(typeof e.pA!=='number'||e.pA<1) e.pA=(e.h===e.s&&pt>0)?pt:freePort(e.s,'s',e);
+      if(typeof e.pB!=='number'||e.pB<1) e.pB=(e.h===e.t&&pt>0)?pt:freePort(e.t,'t',e);
     }
     syncRackPort(e);
   });
