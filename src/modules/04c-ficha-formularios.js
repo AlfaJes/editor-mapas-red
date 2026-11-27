@@ -36,7 +36,9 @@ export function readHTML(n){
       if(!L.length)return '';
       return '<h4 style="font-size:10.5px;letter-spacing:.1em;color:#7d93b3;margin:10px 0 5px">ADAPTADORES ('+L.length+')</h4>'+
         '<div class="niclist">'+L.map(function(x){
-          var det=[x.k,x.m,(x.vlan?'VLAN '+x.vlan:''),x.ip,x.mac,(x.host?'⇢ '+x.host:'')].filter(Boolean).join(' · ');
+          var ips=ipsOf(x), dms=domsOf(x);
+          var det=[x.k,x.m,(x.vlan?'VLAN '+x.vlan:''),ips.join(' · '),x.mac,
+                   (dms.length?'dominio: '+dms.join(', '):''),(x.host?'⇢ '+x.host:'')].filter(Boolean).join(' · ');
           return '<div class="nicl"><b>'+(x.n||'adaptador')+'</b><span>'+escAttr(det)+'</span></div>';
         }).join('')+'</div>';
     })()}
@@ -136,9 +138,9 @@ export function effNics(n){
   var ips=Array.isArray(n.ip)?n.ip.filter(Boolean):(n.ip?String(n.ip).split(/[\n,;]+/).map(function(x){return x.trim();}).filter(Boolean):[]);
   var mac=n.mac||'';
   if(!ips.length&&!mac) return [];
-  if(!ips.length) return [{n:'',k:'física',m:'acceso',vlan:'',ip:'',mac:mac,host:''}];
+  if(!ips.length) return [{n:'',k:'física',m:'acceso',vlan:'',ips:[],mac:mac,doms:[],host:''}];
   return ips.map(function(x,i){
-    return {n:'',k:'física',m:'acceso',vlan:'',ip:x,mac:(i===0?mac:''),host:''};
+    return {n:'',k:'física',m:'acceso',vlan:'',ips:[x],ip:x,mac:(i===0?mac:''),doms:[],host:''};
   });
 }
 export function perifRowHTML(p,opts){
@@ -378,6 +380,16 @@ export function renderMExtra(){
   bindPorts('m');
 }
 
+export function ipsOf(nic){
+  if(!nic)return [];
+  if(Array.isArray(nic.ips)&&nic.ips.length)return nic.ips;
+  return nic.ip?String(nic.ip).split(/[,\s;]+/).map(function(x){return x.trim();}).filter(Boolean):[];
+}
+export function domsOf(nic){
+  if(!nic)return [];
+  if(Array.isArray(nic.doms))return nic.doms;
+  return nic.dom?String(nic.dom).split(/[,\s;]+/).map(function(x){return x.trim();}).filter(Boolean):[];
+}
 export function nicsHTML(list){
   list=list||[];
   if(!list.length)list=[{k:'virtual',m:'bridge'}];
@@ -390,7 +402,8 @@ export function nicsHTML(list){
       '<select class="nc-k">'+ks.map(function(k){return '<option'+(String(v.k||'virtual')===k?' selected':'')+'>'+k+'</option>';}).join('')+'</select>'+
       '<select class="nc-m">'+ms.map(function(k){return '<option'+(String(v.m||'bridge')===k?' selected':'')+'>'+k+'</option>';}).join('')+'</select>'+
       '<input class="nc-v" placeholder="VLAN" value="'+escAttr(v.vlan||'')+'">'+
-      '<input class="nc-ip" placeholder="IP" value="'+escAttr(v.ip||'')+'">'+
+      '<input class="nc-ip" placeholder="IPs (coma)" value="'+escAttr(ipsOf(v).join(', '))+'">'+
+      '<input class="nc-dom" placeholder="dominios (coma)" value="'+escAttr(domsOf(v).join(', '))+'">'+
       '<input class="nc-mac" placeholder="MAC" value="'+escAttr(v.mac||'')+'">'+
       '<input class="nc-h" placeholder="en host/switch" value="'+escAttr(v.host||'')+'">'+
       '<button type="button" class="x nc-del" title="Quitar">\u2715</button>'+
@@ -399,10 +412,13 @@ export function nicsHTML(list){
 }
 export function nicsRead(boxId){
   var box=document.getElementById(boxId); if(!box)return [];
+  function lst(x){ return String(x||'').split(/[,\s;]+/).map(function(z){return z.trim();}).filter(Boolean); }
   return [].map.call(box.querySelectorAll('.nicrow'),function(r){
     function v(c){var e=r.querySelector(c);return e?String(e.value||'').trim():'';}
-    var o={n:v('.nc-n'),k:v('.nc-k'),m:v('.nc-m'),vlan:v('.nc-v'),ip:v('.nc-ip'),mac:v('.nc-mac'),host:v('.nc-h')};
-    return (o.n||o.ip||o.mac||o.host)?o:null;
+    var o={n:v('.nc-n'),k:v('.nc-k'),m:v('.nc-m'),vlan:v('.nc-v'),
+           ips:lst(v('.nc-ip')),mac:v('.nc-mac'),doms:lst(v('.nc-dom')),host:v('.nc-h')};
+    if(o.ips.length===1)o.ip=o.ips[0];
+    return (o.n||o.ips.length||o.mac||o.host)?o:null;
   }).filter(Boolean);
 }
 export function nicsFill(boxId,list){

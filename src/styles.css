@@ -397,7 +397,7 @@ header{grid-column:1/-1;display:flex;flex-direction:column;gap:0;padding:0;align
 .nicrow{display:flex;flex-wrap:wrap;gap:4px;align-items:center;background:#0c1626;border:1px solid #24344f;border-radius:6px;padding:5px}
 .nicrow input,.nicrow select{background:#0b1424;border:1px solid #26374f;color:#dbe9ff;border-radius:5px;font:inherit;font-size:10.5px;padding:3px 5px;min-width:0}
 .nicrow .nc-n{width:92px}.nicrow .nc-k{width:70px}.nicrow .nc-m{width:78px}
-.nicrow .nc-v{width:52px}.nicrow .nc-ip{width:100px}.nicrow .nc-mac{width:112px}.nicrow .nc-h{width:96px}
+.nicrow .nc-v{width:52px}.nicrow .nc-ip{width:118px}.nicrow .nc-dom{width:118px}.nicrow .nc-mac{width:112px}.nicrow .nc-h{width:96px}
 .nicrow .nc-del{margin-left:auto;background:none;border:none;color:#7d93b3;cursor:pointer;font-size:12px}
 .niclist{display:flex;flex-direction:column;gap:3px}
 .nicl{display:flex;flex-direction:column;background:#0e1b2e;border:1px solid #1e2e48;border-radius:6px;padding:4px 7px}
