@@ -138,10 +138,8 @@ export function effNics(n){
   var ips=Array.isArray(n.ip)?n.ip.filter(Boolean):(n.ip?String(n.ip).split(/[\n,;]+/).map(function(x){return x.trim();}).filter(Boolean):[]);
   var mac=n.mac||'';
   if(!ips.length&&!mac) return [];
-  if(!ips.length) return [{n:'',k:'física',m:'acceso',vlan:'',ips:[],mac:mac,doms:[],host:''}];
-  return ips.map(function(x,i){
-    return {n:'',k:'física',m:'acceso',vlan:'',ips:[x],ip:x,mac:(i===0?mac:''),doms:[],host:''};
-  });
+  // un unico adaptador que agrupa todas las IPs del equipo
+  return [{n:'',k:'física',m:'acceso',vlan:'',ips:ips,mac:mac,doms:[],host:''}];
 }
 export function perifRowHTML(p,opts){
   const t=(p&&p.t)||opts[0];
@@ -390,11 +388,23 @@ export function domsOf(nic){
   if(Array.isArray(nic.doms))return nic.doms;
   return nic.dom?String(nic.dom).split(/[,\s;]+/).map(function(x){return x.trim();}).filter(Boolean):[];
 }
+// corrige valores que hayan quedado en el campo equivocado (IP en VLAN, MAC en dominios...)
+export function fixNic(v){
+  if(!v||typeof v!=='object')return v;
+  var IPRE=/^\d{1,3}(\.\d{1,3}){3}$/, MACRE=/^[0-9A-Fa-f]{2}([:-][0-9A-Fa-f]{2}){5}$/;
+  var o={}; for(var k in v)if(Object.prototype.hasOwnProperty.call(v,k))o[k]=v[k];
+  var ips=ipsOf(o).slice(), doms=domsOf(o), mac=String(o.mac||'').trim(), nv=String(o.vlan||'').trim(), nd=[];
+  if(nv&&IPRE.test(nv)){ if(ips.indexOf(nv)<0)ips.push(nv); nv=''; }
+  doms.forEach(function(d){ if(MACRE.test(d)&&!mac){ mac=d; } else if(MACRE.test(d)&&mac){ /* mac repetida: se descarta */ } else nd.push(d); });
+  if(ips.length===1)o.ip=ips[0]; else delete o.ip;
+  o.ips=ips; o.doms=nd; o.mac=mac; if(nv)o.vlan=nv; else delete o.vlan;
+  return o;
+}
 export function nicsHTML(list){
   list=list||[];
   if(!list.length)list=[{k:'virtual',m:'bridge'}];
   return list.map(function(v){
-    v=v||{};
+    v=fixNic(v)||{};
     var ks=['virtual','física'];
     var ms=['bridge','host-only','NAT','trunk','acceso'];
     return '<div class="nicrow">'+
