@@ -215,6 +215,12 @@ export function exportRackPNG(){
     if(cs.opacity&&cs.opacity!=='1')d.setAttribute('opacity',cs.opacity);
   }
   clone.setAttribute('xmlns','http://www.w3.org/2000/svg');
+  // fuera los controles del editor (⚡ y ✕) y cualquier texto negro ilegible
+  clone.querySelectorAll('.cabbulk,.cabxx,.cabcfg,.armcfg').forEach(function(x){ x.remove(); });
+  clone.querySelectorAll('text').forEach(function(x){
+    var f=(x.getAttribute('fill')||'').replace(/\s+/g,'');
+    if(!f||f==='#000'||f==='#000000'||f==='black'||f==='rgb(0,0,0)') x.setAttribute('fill','#dfe9f7');
+  });
   var xml=new XMLSerializer().serializeToString(clone);
   var img=new Image();
   img.onload=function(){

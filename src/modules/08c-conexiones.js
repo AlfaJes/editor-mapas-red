@@ -137,37 +137,47 @@ function ppFillSide(sfx, keep) {
     return !keep && cur && p === cur.port;
   });
 }
-// convierte it.links en cables de verdad del nodo del patch
+// convierte it.links en cables de verdad del nodo del patch (sin tocar los que ya existen)
 export function ppApplyLinks(it) {
   if (!it || !it.nid || !S.byId[it.nid]) return;
   var nid = it.nid;
-  // los cables que ya existen se conservan (trazado, color, etiqueta) al reconstruir
-  var prev = {};
+  // cables actuales del patch, indexados por puerto local + equipo + puerto del otro extremo
+  var exist = {};
   S.doc.edges.forEach(function (e) {
     if (e.s !== nid && e.t !== nid) return;
     var me = e.s === nid ? e.pA : e.pB;
     var other = e.s === nid ? e.t : e.s;
     var othPort = e.s === nid ? e.pB : e.pA;
-    prev[me + '|' + (e.pside || '') + '|' + other + '|' + othPort] = e;
+    var k = me + '|' + other + '|' + othPort;
+    (exist[k] = exist[k] || []).push(e);
   });
-  S.doc.edges = S.doc.edges.filter(function (e) { return e.s !== nid && e.t !== nid; });
+  var keepSet = [];
   Object.keys(it.links || {}).forEach(function (p) {
     var lk = ppLink(it, p);
     ['a', 'b'].forEach(function (side) {
       var x = lk[side]; if (!x || !x.devId || !S.byId[x.devId]) return;
       var pt = parseInt(p, 10) || 0, dp = parseInt(x.port, 10) || 0;
       if (!pt || !dp) return;
-      var hs = hostOf(nid, x.devId);
-      var e = { s: nid, t: x.devId, h: hs.id, port: 0, pA: pt, pB: dp, pside: side };
-      var o = prev[pt + '|' + side + '|' + x.devId + '|' + dp];
-      if (o) {
-        ['pts', 'bx', 'by', 'color', 'cat', 'etq', 'net', 'vis', 'curve', 'dash', 'w'].forEach(function (k) {
-          if (o[k] !== undefined) e[k] = (k === 'pts' && Array.isArray(o.pts)) ? o.pts.slice() : o[k];
-        });
+      var k = pt + '|' + x.devId + '|' + dp;
+      var arr = exist[k] || [];
+      var e = arr.filter(function (z) { return keepSet.indexOf(z) < 0; })[0];
+      if (e) {                      // misma conexión: se reutiliza el cable tal cual
+        if (e.pside !== side) e.pside = side;
+        keepSet.push(e);
+        try { syncRackPort(e); } catch (_) {}
+        return;
       }
-      try { syncRackPort(e); } catch (_) {}
-      S.doc.edges.push(e);
+      var hs = hostOf(nid, x.devId);
+      var ne = { s: nid, t: x.devId, h: hs.id, port: 0, pA: pt, pB: dp, pside: side };
+      try { syncRackPort(ne); } catch (_) {}
+      S.doc.edges.push(ne);
+      keepSet.push(ne);
     });
+  });
+  // se quitan solo los cables del patch que ya no figuran en sus puertos
+  S.doc.edges = S.doc.edges.filter(function (e) {
+    if (e.s !== nid && e.t !== nid) return true;
+    return keepSet.indexOf(e) >= 0;
   });
 }
 // lee los cables existentes del patch y rellena it.links (a/b)
