@@ -295,14 +295,26 @@ export function renderArmarios(){
           s+='<rect x="'+ox+'" y="'+(ry+sockH+1).toFixed(1)+'" width="'+blockW+'" height="'+stripH+'" rx="1" fill="#c9d4e2" opacity=".92"/>';
         }
         var pnid=it.nid;
-        var ee=pnid?S.doc.edges.filter(function(e){return (e.s===pnid&&e.pA===p)||(e.t===pnid&&e.pB===p);})[0]:null;
+        var ea=null, eb=null;
+        if(pnid){
+          S.doc.edges.forEach(function(x){
+            if(!((x.s===pnid&&x.pA===p)||(x.t===pnid&&x.pB===p)))return;
+            if(x.pside==='b')eb=x;
+            else if(x.pside==='a')ea=x;
+            else if(!ea)ea=x; else if(!eb)eb=x;
+          });
+        }
+        var ee=ea||eb;
         var oth=ee?(S.byId[ee.s===pnid?ee.t:ee.s]||{}):null;
-        var lcol=ee?(cabColor(ee)||'#4f8cff'):'';
+        var ca=ea?(cabColor(ea)||'#4f8cff'):'', cb=eb?(cabColor(eb)||'#4f8cff'):'';
         var bx2=ox+c*pw+(c>=Math.ceil(per/2)?huecoG:0);
         var w2=Math.max(4,pw-2.6);
+        var hh2=sockH/2;
         s+='<rect class="armport'+(ee?' on':'')+'" data-pp="'+idx+'" data-p="'+p+'" x="'+(bx2+1.2).toFixed(1)+'" y="'+ry.toFixed(1)+'" width="'+w2.toFixed(1)+'" height="'+sockH.toFixed(1)+'" rx="1.6"'+
-           (ee?' style="fill:'+lcol+';fill-opacity:.9;stroke:'+lcol+'"':'')+
            '><title>'+escAttr(_ptit(it,p,ee,pnid,oth))+'</title></rect>';
+        // mitad de arriba = trasera (equipo), mitad de abajo = delantera (switch)
+        if(ca)s+='<rect x="'+(bx2+1.2).toFixed(1)+'" y="'+ry.toFixed(1)+'" width="'+w2.toFixed(1)+'" height="'+hh2.toFixed(1)+'" rx="1.2" fill="'+ca+'" fill-opacity=".95" pointer-events="none"/>';
+        if(cb)s+='<rect x="'+(bx2+1.2).toFixed(1)+'" y="'+(ry+hh2).toFixed(1)+'" width="'+w2.toFixed(1)+'" height="'+hh2.toFixed(1)+'" rx="1.2" fill="'+cb+'" fill-opacity=".95" pointer-events="none"/>';
         s+='<text x="'+(bx2+pw/2-1.2).toFixed(1)+'" y="'+(ry+sockH+stripH-1.4).toFixed(1)+'" class="cabpn2" text-anchor="middle">'+p+'</text>';
       }
       s+='</g>';
