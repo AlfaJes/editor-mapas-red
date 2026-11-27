@@ -77,23 +77,22 @@ export function syncRackPort(e){
   e.port = (e.h===e.s)? (e.pA||1) : (e.pB||1);
 }
 export function dedupePorts(){
-  var seen={};
-  function pick(id){
+  // cada puerto admite 1 cable; en un patch panel, 2 (trasera y delantera)
+  var cnt={};
+  function lim(id){ var n=S.byId[id]; return (n&&n.tipo==='patch')?2:1; }
+  function take(id,port){
+    var L=lim(id), k=id+':'+port;
+    if(port>0 && (cnt[k]||0)<L){ cnt[k]=(cnt[k]||0)+1; return port; }
     var cap=capFor(id);
-    for(var p=1;p<=cap+40;p++){ if(!seen[id+':'+p]) return p; }
+    for(var p=1;p<=cap+40;p++){
+      var kk=id+':'+p;
+      if((cnt[kk]||0)<L){ cnt[kk]=(cnt[kk]||0)+1; return p; }
+    }
     return cap+41;
   }
-  // en un patch panel cada puerto puede tener dos cables (trasero = equipo, delantero = switch)
-  function esPatch(id){ var n=S.byId[id]; return !!(n&&n.tipo==='patch'); }
   S.doc.edges.forEach(function(e){
-    if(!e.pA){ e.pA=pick(e.s); }
-    var k1=e.s+':'+e.pA;
-    if(seen[k1]&&!esPatch(e.s)){ e.pA=pick(e.s); k1=e.s+':'+e.pA; }
-    seen[k1]=1;
-    if(!e.pB){ e.pB=pick(e.t); }
-    var k2=e.t+':'+e.pB;
-    if(seen[k2]&&!esPatch(e.t)){ e.pB=pick(e.t); k2=e.t+':'+e.pB; }
-    seen[k2]=1;
+    e.pA=take(e.s, parseInt(e.pA,10)||0);
+    e.pB=take(e.t, parseInt(e.pB,10)||0);
   });
   S.doc.edges.forEach(syncRackPort);
 }
