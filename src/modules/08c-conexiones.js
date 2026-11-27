@@ -130,6 +130,15 @@ function ppFillSide(sfx, keep) {
 export function ppApplyLinks(it) {
   if (!it || !it.nid || !S.byId[it.nid]) return;
   var nid = it.nid;
+  // los cables que ya existen se conservan (trazado, color, etiqueta) al reconstruir
+  var prev = {};
+  S.doc.edges.forEach(function (e) {
+    if (e.s !== nid && e.t !== nid) return;
+    var me = e.s === nid ? e.pA : e.pB;
+    var other = e.s === nid ? e.t : e.s;
+    var othPort = e.s === nid ? e.pB : e.pA;
+    prev[me + '|' + (e.pside || '') + '|' + other + '|' + othPort] = e;
+  });
   S.doc.edges = S.doc.edges.filter(function (e) { return e.s !== nid && e.t !== nid; });
   Object.keys(it.links || {}).forEach(function (p) {
     var lk = ppLink(it, p);
@@ -139,6 +148,12 @@ export function ppApplyLinks(it) {
       if (!pt || !dp) return;
       var hs = hostOf(nid, x.devId);
       var e = { s: nid, t: x.devId, h: hs.id, port: 0, pA: pt, pB: dp, pside: side };
+      var o = prev[pt + '|' + side + '|' + x.devId + '|' + dp];
+      if (o) {
+        ['pts', 'color', 'cat', 'etq', 'net', 'vis', 'curve', 'dash', 'w'].forEach(function (k) {
+          if (o[k] !== undefined) e[k] = (k === 'pts' && Array.isArray(o.pts)) ? o.pts.slice() : o[k];
+        });
+      }
       try { syncRackPort(e); } catch (_) {}
       S.doc.edges.push(e);
     });
@@ -245,13 +260,33 @@ export function lnkSave() {
   {
     var a = S.LN.nodeId, b = dev;
     if (a === b) { alert('No se puede conectar consigo mismo.'); return; }
-    // liberar los puertos implicados
+    // enlace que ya ocupa este puerto: se reutiliza para conservar el trazado
+    var old = S.doc.edges.filter(function (e) {
+      return (e.s === a && e.pA === S.LN.port) || (e.t === a && e.pB === S.LN.port);
+    })[0] || null;
+    // liberar el puerto del equipo destino (y el enlace viejo, que se reinserta mutado)
     S.doc.edges = S.doc.edges.filter(function (e) {
-      return !((e.s === a && e.pA === S.LN.port) || (e.t === a && e.pB === S.LN.port) ||
-               (e.s === b && e.pA === port) || (e.t === b && e.pB === port));
+      if (e === old) return false;
+      return !((e.s === b && e.pA === port) || (e.t === b && e.pB === port));
     });
     var hs = hostOf(a, b);
-    var e2 = { s: a, t: b, h: hs.id, port: 0, pA: S.LN.port, pB: port };
+    var e2;
+    if (old) {
+      // se conservan puntos intermedios, color, categoría, etiqueta y red;
+      // solo cambia el extremo que se está editando (el otro tramo se estira)
+      e2 = { s: old.s, t: old.t, pA: old.pA, pB: old.pB };
+      ['pts', 'color', 'cat', 'etq', 'net', 'vis', 'curve', 'tip', 'dash', 'w'].forEach(function (k) {
+        if (old[k] !== undefined) e2[k] = (k === 'pts' ? old.pts.slice() : old[k]);
+      });
+      if (e2.s !== a) {                    // se orienta para que este puerto quede en 's'
+        var _s = e2.s; e2.s = e2.t; e2.t = _s;
+        var _p = e2.pA; e2.pA = e2.pB; e2.pB = _p;
+        if (e2.pts) e2.pts.reverse();
+      }
+      e2.pA = S.LN.port; e2.t = b; e2.pB = port; e2.h = hs.id; e2.port = 0;
+    } else {
+      e2 = { s: a, t: b, h: hs.id, port: 0, pA: S.LN.port, pB: port };
+    }
     S.doc.edges.push(e2); syncRackPort(e2);
     save(); rebuild(); render(); renderList(); renderArmarios(); showDetail(); lnkClose();
   }
@@ -623,11 +658,12 @@ export function egSave() {
   } else {
     var hs = hostOf(a, b);
     var e2 = { s: a, t: b, h: hs.id, port: 0, pA: pa, pB: pb };
-    if (old) { // los dos extremos son nuevos: se copian color, categoria y etiqueta
+    if (old) { // los dos extremos son nuevos: se copian color, categoria, etiqueta y trazado
       if (old.color) e2.color = old.color;
       if (old.cat) e2.cat = old.cat;
       if (old.etq) e2.etq = old.etq;
       if (old.net) e2.net = old.net;
+      if (Array.isArray(old.pts) && old.pts.length) e2.pts = old.pts.slice();
     }
     S.doc.edges.push(e2); try { syncRackPort(e2); } catch (_) {}
   }

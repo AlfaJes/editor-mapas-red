@@ -217,8 +217,7 @@ export function bindChips(root){
 export function readFields(pre,tipo){
   const out={};
   (TYPEF[tipo]||[]).forEach(f=>{
-    const el=document.getElementById(pre+'_'+f.k);
-    if(!el)return;
+    // listas (periféricos): no tienen campo propio, cuelgan de plist_<pre>_<k>
     if(f.type==='list'){
       const box=document.getElementById('plist_'+pre+'_'+f.k);
       out[f.k]=box?[].slice.call(box.querySelectorAll('.pdet')).map(r=>{
@@ -227,6 +226,8 @@ export function readFields(pre,tipo){
       }):[];
       return;
     }
+    const el=document.getElementById(pre+'_'+f.k);
+    if(!el)return;
     if(f.type==='chips'){
       if(f.det){
         const pl=document.getElementById('plist_'+pre+'_'+f.k);
