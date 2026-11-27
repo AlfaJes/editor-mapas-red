@@ -162,12 +162,16 @@ export function portGrid(n){
     else if(e.t===n.id)items.push({port:e.pB||1,other:e.s,e:e,idx:idx,side:'t'});
   });
   const capN=capFor(n.id);
-  const N=Math.max(cap||8, capN);
+  // numero de puertos: lo declarado, el inventario o el mayor puerto usado
+  let used=0; items.forEach(function(i){ if(i.port>used)used=i.port; });
+  const inv=(n.ports&&n.ports.length)||0;
+  let N=Math.max(cap||0, inv, used);
+  if(!N) N=(n.tipo==='switch'||n.tipo==='router'||n.tipo==='firewall')?8:1;
   let cells='';
   for(let p=1;p<=N;p++){
     const it=items.find(x=>x.port===p);
     if(it){const d=S.byId[it.other];
-      cells+=`<div class="pcell on" data-id="${d.id}" title="P${p} · ${escAttr(d.nombre)}">${p}<span class="d" style="background:${col(d)}"></span></div>`;}
+      cells+=`<div class="pcell on" data-id="${d.id}" data-sel="${n.id}|${d.id}" data-port="${p}" title="P${p} · ${escAttr(d.nombre)} — pulsa para ver la conexión">${p}<span class="d" style="background:${col(d)}"></span></div>`;}
     else cells+=`<div class="pcell">${p}</div>`;
   }
   const rows=items.slice().sort((a,b)=>a.port-b.port).map(it=>{

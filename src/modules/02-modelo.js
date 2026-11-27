@@ -58,8 +58,8 @@ export function capFor(id){
   if(n.tipo==='patch') return Math.max(2,parseInt(n.puertos)||24);
   var c=Math.max(parseInt(n.puertos)||0,(n.ports&&n.ports.length)||0);
   S.doc.edges.forEach(function(e){ if(e.s===id&&e.pA>c)c=e.pA; if(e.t===id&&e.pB>c)c=e.pB; });
-  var base=(n.tipo==='switch'||n.tipo==='router'||n.tipo==='firewall')?8:2;
-  return Math.max(base,c||0)+1;
+  if(!c) c=(n.tipo==='switch'||n.tipo==='router'||n.tipo==='firewall')?8:2;
+  return c+1;
 }
 export function freePort(id,side,except){
   var used={};

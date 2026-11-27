@@ -75,6 +75,15 @@ document.addEventListener('click',function(ev){
     }
     return;
   }
+  if(t&&t.classList&&t.classList.contains('pcell')&&t.classList.contains('on')){
+    var ds=t.getAttribute('data-sel')||'';
+    var parts=ds.split('|');
+    if(parts.length===2&&parts[0]&&parts[1]){
+      state.esel={s:parts[0],t:parts[1]}; state.sel=null;
+      render(); renderList(); showDetail();
+    }
+    return;
+  }
   if(t&&t.classList&&t.classList.contains('na-add')){
     var c=t.closest('.nicrow'); var box2=c&&c.querySelector('.naddrs');
     if(box2){ var d2=document.createElement('div'); d2.innerHTML=addrRowHTML({}); box2.appendChild(d2.firstElementChild); }
