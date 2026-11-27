@@ -4,7 +4,7 @@ import { rebuild, save, snap } from './02-modelo.js';
 import { ZBOX, layout, restoreLayout } from './03-layout.js';
 import { C, applyT, fit } from './04a-geometria.js';
 import { render, renderList, v } from './04b-render-mapa.js';
-import { nicsHTML, showDetail } from './04c-ficha-formularios.js';
+import { addrRowHTML, nicsHTML, showDetail } from './04c-ficha-formularios.js';
 import { addNode, closeModal, createFromModal, undo } from './05-mutaciones.js';
 import { renderNets } from './10a-ruta-revision.js';
 import { t } from './dom.js';
@@ -63,6 +63,16 @@ document.addEventListener('click',function(ev){
   if(t&&t.classList&&t.classList.contains('nc-del')){
     var row=t.closest('.nicrow'); var bx=row&&row.parentNode;
     if(row&&bx){ row.remove(); if(!bx.querySelector('.nicrow')) bx.innerHTML=nicsHTML([{k:'virtual',m:'bridge'}]); }
+    return;
+  }
+  if(t&&t.classList&&t.classList.contains('na-add')){
+    var c=t.closest('.nicrow'); var box2=c&&c.querySelector('.naddrs');
+    if(box2){ var d2=document.createElement('div'); d2.innerHTML=addrRowHTML({}); box2.appendChild(d2.firstElementChild); }
+    return;
+  }
+  if(t&&t.classList&&t.classList.contains('na-del')){
+    var ar=t.closest('.naddr'); var nb=ar&&ar.parentNode;
+    if(ar&&nb){ ar.remove(); if(!nb.querySelector('.naddr')){ var d3=document.createElement('div'); d3.innerHTML=addrRowHTML({}); nb.appendChild(d3.firstElementChild); } }
   }
 });
 document.getElementById('m_ok').onclick=createFromModal;

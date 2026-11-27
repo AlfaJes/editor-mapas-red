@@ -37,9 +37,12 @@ export function readHTML(n){
       return '<h4 style="font-size:10.5px;letter-spacing:.1em;color:#7d93b3;margin:10px 0 5px">ADAPTADORES ('+L.length+')</h4>'+
         '<div class="niclist">'+L.map(function(x){
           var ips=ipsOf(x), dms=domsOf(x);
-          var det=[x.k,x.m,(x.vlan?'VLAN '+x.vlan:''),ips.join(' · '),x.mac,
-                   (dms.length?'dominio: '+dms.join(', '):''),(x.host?'⇢ '+x.host:'')].filter(Boolean).join(' · ');
-          return '<div class="nicl"><b>'+(x.n||'adaptador')+'</b><span>'+escAttr(det)+'</span></div>';
+          var det=[x.k,x.m,(x.vlan?'VLAN '+x.vlan:''),x.mac,(x.host?'⇢ '+x.host:'')].filter(Boolean).join(' · ');
+          var ad=(x.addr&&x.addr.length)?x.addr:ipsOf(x).map(function(ip,i){return {ip:ip,dom:(domsOf(x)[i]||'')};});
+          var addrTxt=ad.length?'<div class="nicaddr">'+ad.map(function(a){
+            return '<span>'+(a.ip?'<b>'+escAttr(a.ip)+'</b>':'')+(a.dom?' <i>'+escAttr(a.dom)+'</i>':'')+'</span>';
+          }).join('')+'</div>':'';
+          return '<div class="nicl"><b>'+(x.n||'adaptador')+'</b><span>'+escAttr(det)+'</span>'+addrTxt+'</div>';
         }).join('')+'</div>';
     })()}
    ${(n.tipo==='switch'||n.tipo==='router'||n.tipo==='firewall')?portGrid(n):''}
@@ -139,7 +142,8 @@ export function effNics(n){
   var mac=n.mac||'';
   if(!ips.length&&!mac) return [];
   // un unico adaptador que agrupa todas las IPs del equipo
-  return [{n:'',k:'física',m:'acceso',vlan:'',ips:ips,mac:mac,doms:[],host:''}];
+  return [{n:'',k:'física',m:'acceso',vlan:'',mac:mac,ips:ips,doms:[],
+           addr:ips.map(function(x){return {ip:x,dom:''};}),host:''}];
 }
 export function perifRowHTML(p,opts){
   const t=(p&&p.t)||opts[0];
@@ -396,9 +400,30 @@ export function fixNic(v){
   var ips=ipsOf(o).slice(), doms=domsOf(o), mac=String(o.mac||'').trim(), nv=String(o.vlan||'').trim(), nd=[];
   if(nv&&IPRE.test(nv)){ if(ips.indexOf(nv)<0)ips.push(nv); nv=''; }
   doms.forEach(function(d){ if(MACRE.test(d)&&!mac){ mac=d; } else if(MACRE.test(d)&&mac){ /* mac repetida: se descarta */ } else nd.push(d); });
+  // pares IP + dominio
+  var addr=[];
+  if(Array.isArray(o.addr)&&o.addr.length){
+    o.addr.forEach(function(a){
+      a=a||{}; var ip=String(a.ip||'').trim(), dom=String(a.dom||'').trim();
+      if(ip||dom)addr.push({ip:ip,dom:dom});
+    });
+  }
+  var mx=Math.max(ips.length,nd.length);
+  for(var i=0;i<mx;i++){
+    var ip2=ips[i]||'', dom2=nd[i]||'';
+    if(!addr.some(function(a){return a.ip===ip2&&a.dom===dom2;}))addr.push({ip:ip2,dom:dom2});
+  }
   if(ips.length===1)o.ip=ips[0]; else delete o.ip;
-  o.ips=ips; o.doms=nd; o.mac=mac; if(nv)o.vlan=nv; else delete o.vlan;
+  o.addr=addr; o.ips=ips; o.doms=nd; o.mac=mac; if(nv)o.vlan=nv; else delete o.vlan;
   return o;
+}
+export function addrRowHTML(a){
+  a=a||{};
+  return '<div class="naddr">'+
+    '<input class="na-ip" placeholder="dirección IP" value="'+escAttr(a.ip||'')+'">'+
+    '<input class="na-dom" placeholder="dominio de red" value="'+escAttr(a.dom||'')+'">'+
+    '<button type="button" class="x na-del" title="Quitar dirección">\u2715</button>'+
+  '</div>';
 }
 export function nicsHTML(list){
   list=list||[];
@@ -412,11 +437,13 @@ export function nicsHTML(list){
       '<select class="nc-k">'+ks.map(function(k){return '<option'+(String(v.k||'virtual')===k?' selected':'')+'>'+k+'</option>';}).join('')+'</select>'+
       '<select class="nc-m">'+ms.map(function(k){return '<option'+(String(v.m||'bridge')===k?' selected':'')+'>'+k+'</option>';}).join('')+'</select>'+
       '<input class="nc-v" placeholder="VLAN" value="'+escAttr(v.vlan||'')+'">'+
-      '<input class="nc-ip" placeholder="IPs (coma)" value="'+escAttr(ipsOf(v).join(', '))+'">'+
-      '<input class="nc-dom" placeholder="dominios (coma)" value="'+escAttr(domsOf(v).join(', '))+'">'+
       '<input class="nc-mac" placeholder="MAC" value="'+escAttr(v.mac||'')+'">'+
       '<input class="nc-h" placeholder="en host/switch" value="'+escAttr(v.host||'')+'">'+
       '<button type="button" class="x nc-del" title="Quitar">\u2715</button>'+
+      '<div class="naddrs">'+
+        ((v.addr&&v.addr.length)?v.addr:[{ip:'',dom:''}]).map(addrRowHTML).join('')+
+      '</div>'+
+      '<button type="button" class="btn mini na-add">\u002b IP / dominio</button>'+
     '</div>';
   }).join('');
 }
@@ -425,8 +452,15 @@ export function nicsRead(boxId){
   function lst(x){ return String(x||'').split(/[,\s;]+/).map(function(z){return z.trim();}).filter(Boolean); }
   return [].map.call(box.querySelectorAll('.nicrow'),function(r){
     function v(c){var e=r.querySelector(c);return e?String(e.value||'').trim():'';}
-    var o={n:v('.nc-n'),k:v('.nc-k'),m:v('.nc-m'),vlan:v('.nc-v'),
-           ips:lst(v('.nc-ip')),mac:v('.nc-mac'),doms:lst(v('.nc-dom')),host:v('.nc-h')};
+    var addr=[].map.call(r.querySelectorAll('.naddr'),function(a){
+      var ip=a.querySelector('.na-ip'), dom=a.querySelector('.na-dom');
+      var oi=ip?String(ip.value||'').trim():'', od=dom?String(dom.value||'').trim():'';
+      return (oi||od)?{ip:oi,dom:od}:null;
+    }).filter(Boolean);
+    var o={n:v('.nc-n'),k:v('.nc-k'),m:v('.nc-m'),vlan:v('.nc-v'),mac:v('.nc-mac'),host:v('.nc-h'),
+           addr:addr,
+           ips:addr.map(function(a){return a.ip;}).filter(Boolean),
+           doms:addr.map(function(a){return a.dom;}).filter(Boolean)};
     if(o.ips.length===1)o.ip=o.ips[0];
     return (o.n||o.ips.length||o.mac||o.host)?o:null;
   }).filter(Boolean);
