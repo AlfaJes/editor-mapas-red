@@ -62,7 +62,17 @@ document.addEventListener('click',function(ev){
   }
   if(t&&t.classList&&t.classList.contains('nc-del')){
     var row=t.closest('.nicrow'); var bx=row&&row.parentNode;
-    if(row&&bx){ row.remove(); if(!bx.querySelector('.nicrow')) bx.innerHTML=nicsHTML([{k:'virtual',m:'bridge'}]); }
+    if(row&&bx){
+      // las IPs del adaptador se quitan tambien de la lista del equipo
+      var ips=Array.prototype.map.call(row.querySelectorAll('.na-ip'),function(i){return String(i.value||'').trim();}).filter(Boolean);
+      if(ips.length){
+        var bi=document.getElementById('e_ip')||document.getElementById('m_ip');
+        if(bi){ bi.value=String(bi.value||'').split(/\n|,/).map(function(s){return s.trim();})
+          .filter(function(s){return s&&ips.indexOf(s)<0;}).join('\n'); }
+      }
+      row.remove();
+      if(!bx.querySelector('.nicrow')) bx.innerHTML=nicsHTML([{k:'virtual',m:'bridge'}]);
+    }
     return;
   }
   if(t&&t.classList&&t.classList.contains('na-add')){
@@ -72,7 +82,20 @@ document.addEventListener('click',function(ev){
   }
   if(t&&t.classList&&t.classList.contains('na-del')){
     var ar=t.closest('.naddr'); var nb=ar&&ar.parentNode;
-    if(ar&&nb){ ar.remove(); if(!nb.querySelector('.naddr')){ var d3=document.createElement('div'); d3.innerHTML=addrRowHTML({}); nb.appendChild(d3.firstElementChild); } }
+    if(ar&&nb){
+      // quitar la IP tambien de la lista "DIRECCIONES IP" del equipo
+      var ipEl=ar.querySelector('.na-ip'), ipv=ipEl?String(ipEl.value||'').trim():'';
+      if(ipv){
+        var boxIP=document.getElementById('e_ip')||document.getElementById('m_ip');
+        if(boxIP){
+          boxIP.value=String(boxIP.value||'').split(/\n|,/).map(function(s){return s.trim();})
+            .filter(function(s){return s&&s!==ipv;}).join('\n');
+        }
+      }
+      ar.remove();
+      if(!nb.querySelector('.naddr')){ var d3=document.createElement('div'); d3.innerHTML=addrRowHTML({}); nb.appendChild(d3.firstElementChild); }
+    }
+    return;
   }
 });
 document.getElementById('m_ok').onclick=createFromModal;
