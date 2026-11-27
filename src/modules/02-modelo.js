@@ -95,6 +95,22 @@ export function dedupePorts(){
   });
   S.doc.edges.forEach(syncRackPort);
 }
+// quita enlaces duplicados (mismos equipos y mismos puertos)
+export function dedupeEdges(){
+  var seen={}, out=[], drop=0;
+  S.doc.edges.forEach(function(e){
+    var k1=e.s+'|'+e.pA+'|'+e.t+'|'+e.pB, k2=e.t+'|'+e.pB+'|'+e.s+'|'+e.pA;
+    var k=k1<k2?k1:k2;
+    var prev=seen[k];
+    if(prev){
+      ['color','cat','etq','net','pts','bx','by'].forEach(function(f){ if(prev[f]===undefined&&e[f]!==undefined)prev[f]=e[f]; });
+      drop++; return;
+    }
+    seen[k]=e; out.push(e);
+  });
+  if(drop)S.doc.edges=out;
+  return drop;
+}
 export function ensureEdges(){
   S.doc.edges=S.doc.edges.filter(e=>S.byId[e.s]&&S.byId[e.t]&&e.s!==e.t);
   S.doc.edges.forEach(e=>{ if(!e.h||!S.byId[e.h])e.h=hostOf(e.s,e.t).id; e.port=parseInt(e.port)||0;
@@ -107,6 +123,7 @@ export function ensureEdges(){
     }
     syncRackPort(e);
   });
+  dedupeEdges();
   dedupePorts(); dedupePorts();
   const used={};
   S.doc.edges.forEach(e=>{ if(e.port){(used[e.h]=used[e.h]||new Set()).add(e.port);} });

@@ -278,7 +278,7 @@ document.addEventListener('keydown',e=>{
       const ed=S.doc.edges.find(x=>(x.s===state.esel.s&&x.t===state.esel.t)||(x.s===state.esel.t&&x.t===state.esel.s));
       if(ed){ e.preventDefault();
         if(confirm('\u00bfEliminar el enlace entre '+(S.byId[ed.s]||{}).nombre+' y '+(S.byId[ed.t]||{}).nombre+'?')){
-          snap(); S.doc.edges=S.doc.edges.filter(x=>x!==ed);
+          snap(); S.doc.edges=S.doc.edges.filter(x=>x!==ed && !((x.s===ed.s&&x.t===ed.t&&x.pA===ed.pA&&x.pB===ed.pB)||(x.s===ed.t&&x.t===ed.s&&x.pA===ed.pB&&x.pB===ed.pA)));
           state.esel=null; save(); rebuild(); render(); renderList(); showDetail();
         }
         return; }

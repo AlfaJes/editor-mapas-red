@@ -515,6 +515,35 @@ export function formHTML(n){
       <button class="btn" id="e_ladd">＋</button></div>
   </div>`;
 }
+// datos de los dos extremos de un cable: IPs, dominios y MACs
+export function edgeDataHTML(ed,A,B){
+  function ends(n,port){
+    if(!n)return '';
+    var ips=(Array.isArray(n.ip)?n.ip.slice():[]);
+    var doms=[], macs=[];
+    (n.nics||[]).forEach(function(nc){
+      (nc.addr||[]).forEach(function(a){
+        if(a.ip&&ips.indexOf(a.ip)<0)ips.push(a.ip);
+        if(a.dom)doms.push(a.dom);
+      });
+      (nc.doms||[]).forEach(function(d){ if(d)doms.push(d); });
+      if(nc.mac)macs.push(nc.mac);
+    });
+    if(n.mac&&macs.indexOf(n.mac)<0)macs.unshift(n.mac);
+    function uniq(a){ var o=[]; a.forEach(function(x){ if(x&&o.indexOf(x)<0)o.push(x); }); return o; }
+    ips=uniq(ips); doms=uniq(doms); macs=uniq(macs);
+    var L=[];
+    L.push('<b>'+escAttr(n.nombre)+'</b>'+(port?' · P'+port:''));
+    L.push('<span>IPs: '+(ips.length?escAttr(ips.join(' · ')):'—')+'</span>');
+    L.push('<span>Dominios: '+(doms.length?escAttr(doms.join(' · ')):'—')+'</span>');
+    L.push('<span>MAC: '+(macs.length?escAttr(macs.join(' · ')):'—')+'</span>');
+    return L.join('<br>');
+  }
+  return '<div class="edata">'+
+    '<div class="edr"><i>Desde</i>'+ends(A,ed.pA)+'</div>'+
+    '<div class="edr"><i>Hasta</i>'+ends(B,ed.pB)+'</div>'+
+  '</div>';
+}
 export function showDetail(){
   const d=document.getElementById('detail'),app=document.querySelector('.app');
   if(state.pathMode){
@@ -535,6 +564,7 @@ export function showDetail(){
       app.classList.add('sel');
       d.innerHTML=`<div class="dtitle">Conexión</div>
         <div class="dtype">${A.nombre} — ${B.nombre}</div>
+        ${edgeDataHTML(ed0,A,B)}
         <dl class="kv">
                     <dt>Puerto en ${escAttr(A.nombre)}</dt><dd>${portSel(ed0,'s')}</dd>
           <dt>Puerto en ${escAttr(B.nombre)}</dt><dd>${portSel(ed0,'t')}</dd>

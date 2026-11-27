@@ -437,3 +437,9 @@ header{grid-column:1/-1;display:flex;flex-direction:column;gap:0;padding:0;align
   stroke:#ffd166 !important; stroke-width:1.8px !important;
   filter:drop-shadow(0 0 3px #ffd166);
 }
+
+.edata{display:flex;flex-direction:column;gap:5px;margin:7px 0 5px}
+.edr{background:#0e1b2e;border:1px solid #1e2e48;border-radius:6px;padding:5px 8px;font-size:10.5px;color:#9fb3cf;line-height:1.5}
+.edr i{display:block;font-style:normal;font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:#6b83a4;margin-bottom:2px}
+.edr b{color:#dbe9ff}
+.edr span{display:block}
