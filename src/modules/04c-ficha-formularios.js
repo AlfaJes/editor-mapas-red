@@ -399,6 +399,7 @@ export function fixNic(v){
   var o={}; for(var k in v)if(Object.prototype.hasOwnProperty.call(v,k))o[k]=v[k];
   var ips=ipsOf(o).slice(), doms=domsOf(o), mac=String(o.mac||'').trim(), nv=String(o.vlan||'').trim(), nd=[];
   if(nv&&IPRE.test(nv)){ if(ips.indexOf(nv)<0)ips.push(nv); nv=''; }
+  if(nv&&MACRE.test(nv)){ if(!mac)mac=nv; nv=''; }
   doms.forEach(function(d){ if(MACRE.test(d)&&!mac){ mac=d; } else if(MACRE.test(d)&&mac){ /* mac repetida: se descarta */ } else nd.push(d); });
   // pares IP + dominio
   var addr=[];
