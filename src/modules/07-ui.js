@@ -178,3 +178,25 @@ document.getElementById('bCsv').onclick=()=>{
   const blob=new Blob(['\ufeff'+h.join(';')+'\n'+rows.join('\n')],{type:'text/csv;charset=utf-8'});
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);
   a.download='inventario_red_levante.csv';a.click();};
+
+// ---------- movil: cajon de la lista y hoja inferior de la ficha ----------
+(function(){
+  var bm=document.getElementById('bMenu');
+  var sh=document.getElementById('mshade');
+  var as=document.querySelector('aside');
+  function drawer(on){ if(!as)return; as.classList.toggle('open',!!on); if(sh)sh.classList.toggle('on',!!on); }
+  if(bm)bm.onclick=function(){ drawer(!as.classList.contains('open')); };
+  if(sh)sh.onclick=function(){ drawer(false); };
+  var dc=document.getElementById('dClose');
+  if(dc)dc.onclick=function(){
+    state.sel=null; state.esel=null; state.edit=null;
+    var app=document.querySelector('.app'); if(app)app.classList.remove('sel');
+    render(); renderList(); showDetail();
+  };
+  // al elegir un equipo en la lista, se cierra el cajon
+  document.addEventListener('click',function(ev){
+    var t=ev.target;
+    if(!t||!t.closest)return;
+    if(as&&as.contains(t)&&t.closest('.item, .litem, .zitem')) drawer(false);
+  });
+})();

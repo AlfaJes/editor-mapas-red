@@ -731,4 +731,16 @@ export function showDetail(){
     const st=document.getElementById('e_start');
     if(st)st.onclick=()=>{state.editing=n.id;showDetail();};
   }
+
+  // boton de cerrar la ficha (visible en movil)
+  try{
+    if(d&&d.firstChild&&!d.querySelector('.dclose2')){
+      var _cb=document.createElement('button');
+      _cb.className='dclose2'; _cb.type='button'; _cb.title='Cerrar'; _cb.textContent='\u2715';
+      _cb.onclick=function(){ state.sel=null; state.esel=null; state.edit=null;
+        var ap=document.querySelector('.app'); if(ap)ap.classList.remove('sel');
+        render(); renderList(); showDetail(); };
+      d.insertBefore(_cb,d.firstChild);
+    }
+  }catch(_){}
 }

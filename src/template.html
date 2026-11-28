@@ -17,6 +17,7 @@
 .armitem.sel rect{stroke:#4f8cff}
 /*__CSS__*/</style></head><body><div class="app"><header>
   <div class="hrow hrow1">
+    <button class="btn icon mnav" id="bMenu" title="Mostrar u ocultar la lista">☰</button>
     <div class="hbrand">
       <h1 id="ttl" contenteditable="true" spellcheck="false" title="Clic para editar el título">MAPA DE RED · DELEGACIÓN DE LEVANTE</h1>
       <div class="sub" id="sub" contenteditable="true" spellcheck="false" title="Clic para editar el subtítulo">Centro productivo de Levante · Control Glass A&amp;S · editor interactivo</div>
@@ -73,6 +74,8 @@
   <input type="color" id="cpick" style="position:fixed;left:-100px;top:-100px">
   <input type="file" id="fFile" accept=".json,application/json" style="display:none">
 </header>
+<div class="mshade" id="mshade"></div>
+<button class="dclose" id="dClose" title="Cerrar">✕</button>
 <aside>
   <div class="search"><input id="q" type="search" placeholder="Buscar equipo, IP, MAC, modelo…" autocomplete="off"></div>
   <div class="filters"><div class="frow" id="fTypes"></div>
