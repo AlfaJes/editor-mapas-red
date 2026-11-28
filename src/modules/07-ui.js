@@ -200,3 +200,27 @@ document.getElementById('bCsv').onclick=()=>{
     if(as&&as.contains(t)&&t.closest('.item, .litem, .zitem')) drawer(false);
   });
 })();
+
+// estado vacio: abrir un mapa o crear uno nuevo
+(function(){
+  var eo=document.getElementById('eOpen'), en=document.getElementById('eNew');
+  if(eo)eo.onclick=function(){ document.getElementById('fFile').click(); };
+  if(en)en.onclick=function(){
+    var be=document.getElementById('bEdit'); if(be&&!be.classList.contains('on'))be.click();
+    var ba=document.getElementById('bAdd'); if(ba)ba.click();
+  };
+})();
+export function syncEmpty(){
+  var e=document.getElementById('empty'); if(!e)return;
+  var vacio=!S.nodes||!S.nodes.length;
+  e.classList.toggle('on',vacio);
+}
+
+// al girar el movil o cambiar el tamano de la ventana, encajar el mapa
+(function(){
+  var tmr=null;
+  window.addEventListener('resize',function(){
+    clearTimeout(tmr);
+    tmr=setTimeout(function(){ try{ fit(); render(); }catch(e){} },180);
+  });
+})();

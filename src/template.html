@@ -89,6 +89,16 @@
 <main>
   <svg id="map" xmlns="http://www.w3.org/2000/svg"><defs><pattern id="gridp" width="12" height="12" patternUnits="userSpaceOnUse"><path d="M12 0H0V12" fill="none" stroke="#182740" stroke-width="1"/></pattern></defs><g id="world"><rect id="gridrect" x="-3000" y="-3000" width="12000" height="9000" fill="url(#gridp)" style="display:none"/>
     <g id="gHulls"></g><g id="gEdges"></g><g id="gNodes"></g><g id="gLabels"></g><g id="gELab"></g><g id="gArrows"></g><g id="gNotes"></g><g id="gHandles"></g><rect id="selbox" x="0" y="0" width="0" height="0" fill="rgba(79,140,255,.12)" stroke="#4f8cff" stroke-dasharray="5 4" stroke-width="1.2" style="display:none;pointer-events:none"/></g></svg>
+  <div class="vacio" id="empty">
+    <div class="ebox">
+      <div class="etitle">Aquí no hay ningún mapa todavía</div>
+      <div class="etxt">Abre el JSON que exportaste desde tu equipo, o empieza uno nuevo. En el móvil también puedes abrir el archivo que te hayas enviado (Telegram, correo, Drive…).</div>
+      <div class="ebtns">
+        <button class="btn pri" id="eOpen">📂 Abrir un mapa (JSON)</button>
+        <button class="btn" id="eNew">＋ Empezar uno nuevo</button>
+      </div>
+    </div>
+  </div>
   <div class="legend" id="legend"></div>
   <div id="rack"></div>
   <footer>Arrastra para mover · rueda para zoom · clic en equipo para ver/editar · <b>Shift+arrastrar</b> selecciona varios · borde = red · Ctrl+Z deshace</footer>

@@ -101,6 +101,10 @@ export function render(){
     return `<text class="elab" x="${(a.x+b.x)/2}" y="${(a.y+b.y)/2-6}" text-anchor="middle">${escAttr(e.etq)}</text>`;
   }).join(''):'';
   updateMsbar();
+
+  // aviso cuando el mapa esta vacio
+  try{ var _emp=document.getElementById('empty');
+    if(_emp)_emp.classList.toggle('on',!(S.nodes&&S.nodes.length)); }catch(_){}
 }
 export function renderList(){
   const l=document.getElementById('list'),items=S.nodes.filter(vis);
